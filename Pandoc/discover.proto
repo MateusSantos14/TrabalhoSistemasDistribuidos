@@ -1,0 +1,13 @@
+//discover.proto
+syntax = "proto3";
+
+message DiscoverRequest {
+    string gateway_id = 1;
+}
+
+message DiscoverResponse {
+    string device_type = 1;
+    string ip = 2;
+    int32 port = 3;
+    string initial_state = 4;
+}

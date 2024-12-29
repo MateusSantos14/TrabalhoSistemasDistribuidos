@@ -1,0 +1,11 @@
+//command.proto
+syntax = "proto3";
+
+message Command {
+    string gateway_id = 1;
+}
+
+message CommandResponse {
+    string status = 1;
+    string message = 2;
+}
