@@ -4,11 +4,12 @@ from messages import messages_pb2 as messages
 from threading import Thread
 
 class SimulatedSensor:
-    def __init__(self, device_id, multicast_addr, multicast_port, simulator, periodicity=5):
+    def __init__(self, device_id, multicast_addr, multicast_port, port, simulator, periodicity=5):
         self.device_id = device_id
         self.multicast_addr = multicast_addr
         self.multicast_port = multicast_port
         self.simulator = simulator
+        self.port = port
         self.periodicity = periodicity
         self.type = "SENSOR"  # Atualize conforme o tipo de dispositivo
 
@@ -45,7 +46,7 @@ class SimulatedSensor:
         response = messages.DiscoverResponse()
         response.device_id = str(self.device_id)
         response.ip = socket.gethostbyname(socket.gethostname())  # Atualize com o IP correto do dispositivo
-        response.port = 9998
+        response.port = self.port
         response.type = 0
         data = response.SerializeToString()
 

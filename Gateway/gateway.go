@@ -118,10 +118,6 @@ func (g *Gateway) processDevice(discoverResp *messages.DiscoverResponse) {
 	g.mutex.Lock()
 	defer g.mutex.Unlock()
 
-	// Print the received DiscoverResponse for debugging purposes
-	log.Printf("Received DiscoverResponse: DeviceId=%s, Ip=%s, Port=%d, Type=%d",
-		discoverResp.DeviceId, discoverResp.Ip, discoverResp.Port, discoverResp.Type)
-
 	// Create a Device object from the response data
 	device := Device{
 		ID:   discoverResp.DeviceId,

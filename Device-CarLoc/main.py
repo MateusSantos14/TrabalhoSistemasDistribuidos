@@ -1,11 +1,8 @@
 import SimulatedSensor
+from CarLocLogic.CarLogic import CarLogic
 
-class Simulator:
-    def get_data(self):
-        return 1
+car = CarLogic("CarLocLogic/coordinates.csv")
 
-a = Simulator()
-
-sensor = SimulatedSensor.SimulatedSensor(1,"224.0.0.1",9999,a)
+sensor = SimulatedSensor.SimulatedSensor(1,"224.0.0.1",9999,9998,car)
 
 sensor.run()
