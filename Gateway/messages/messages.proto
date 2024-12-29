@@ -1,0 +1,37 @@
+syntax = "proto3";
+
+package messages;
+
+option go_package = "github.com/username/gateway/messages";
+
+// Mensagens do cliente para o Broker
+message ClientMessage {
+    string request = 1; // Exemplo: "GET_DEVICE_STATE"
+}
+
+message ClientResponse {
+    string response = 1; // Resposta do Broker para o cliente
+}
+
+// Mensagens do dispositivo para o Broker
+message DeviceMessage {
+    string device_id = 1; // ID do dispositivo
+    string data = 2;      // Dados enviados pelo dispositivo
+}
+
+message DeviceResponse {
+    string device_id = 1; // ID do dispositivo
+    string response = 2;  // Resposta do Broker para o dispositivo
+}
+
+// Mensagens de descoberta
+message DiscoverMessage {
+    string request = 1; // Exemplo: "DISCOVER_DEVICES"
+}
+
+message DiscoverResponse {
+    string device_id = 1; // ID do dispositivo descoberto
+    string ip = 2;        // Endereço IP do dispositivo
+    int32 port = 3;       // Porta do dispositivo
+    int32 type = 4;        // Sensor ou actuator
+}
