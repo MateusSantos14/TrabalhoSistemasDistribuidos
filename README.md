@@ -1,7 +1,3 @@
----
-title: Visão Geral do Projeto
----
-
 # Visão Geral do Projeto
 
 Este projeto consiste em uma série de componentes que trabalham juntos
@@ -12,7 +8,6 @@ containers Docker. Os dispositivos interagem através de Protocol Buffers
 dinâmica e comunicação entre os dispositivos.
 
 # Estrutura do Projeto
-
     ├── comandsProtoc
     ├── Device-AC
     │   ├── main.py
@@ -22,11 +17,7 @@ dinâmica e comunicação entre os dispositivos.
     │   ├── launch.sh
     │   ├── main.py
     │   ├── messages
-    │   │   ├── messages_pb2.py
-    │   │   └── __pycache__
-    │   │       └── messages_pb2.cpython-312.pyc
-    │   ├── __pycache__
-    │   │   └── SimulatedSensor.cpython-312.pyc
+    │   │   └── messages_pb2.py
     │   ├── requirements.txt
     │   └── SimulatedSensor.py
     ├── Device-Headlight
@@ -42,10 +33,9 @@ dinâmica e comunicação entre os dispositivos.
     │       ├── messages.pb.go
     │       └── messages.proto
     ├── launch.sh
-    └── messages
-        ├── messages_pb2_grpc.py
-        └── messages.proto
-
+    ├── messages
+    │   └── messages.proto
+    └── README.md
 # Componentes
 
 -   **Device-AC**: Simula um dispositivo atuador,
@@ -66,7 +56,7 @@ dinâmica e comunicação entre os dispositivos.
 # Funcionalidades
 
 -   **Mensagens Multicast**: Tanto o componente `Device-CarLoc` quanto o
-    `Gateway` utilizam multicast para comunicação dentro de seus
+    `Gateway` utilizam multicast para descoberta dentro de seus
     containers Docker.
 
 -   **Dispositivos Simulados**: O sistema inclui atuadores simulados
@@ -77,16 +67,6 @@ dinâmica e comunicação entre os dispositivos.
     Protocol Buffers, garantindo uma comunicação eficiente e estruturada
     entre os dispositivos.
 
-# Tarefas Pendentes
-
--   **Ajustar o `DiscoverMessage`**: O `DiscoverMessage` precisa ser
-    atualizado para incluir os IPs do broker, permitindo que os
-    atuadores descubram e salvem esses IPs dinamicamente.
-
--   **Simular o Atuador**: A base para o sensor simulado
-    (`SimulatedSensor.py`) foi criada, agora é necessário desenvolver
-    uma estrutura similar para o atuador simulado
-    (`SimulatedActuator.py`).
 
 # Containers Docker
 
@@ -97,79 +77,35 @@ dinâmica e comunicação entre os dispositivos.
     configura o ambiente necessário.
 
 # Como Rodar
-
-1.  **Instalar Dependências**: As dependências de cada componente estão
-    especificadas no `requirements.txt` (para Python) ou `go.mod` (para
-    Go). Para componentes Python:
-
-            pip install -r requirements.txt
-
-    Para componentes Go:
-
-            go mod tidy
-
-2.  **Construir os Containers Docker**: Navegue até os diretórios
-    respectivos e construa os containers Docker.
-
-            docker build -t device-car-loc .
-            docker build -t gateway .
-
-3.  **Iniciar os Containers**: Você pode iniciar os containers
-    executando o script `launch.sh`.
+**Iniciar os Containers**: Você pode iniciar os containers
+executando o script `launch.sh`.
 
             ./launch.sh
 
-# Ajustes Necessários
+# TODOS TEÓRICOS ESSENCIAIS O QUANTO ANTES
+-   **Documentar mensagens**: Defina os tipos de mensagens que serão trocadas entre clientes e broker e entre broker e devices, além dos dados, existem mensagens de controle essenciais como conexão, desconexão etc. Defini-las antes da implementação seria melhor
 
+# TODOS
+-   **Conexão do cliente**: Implemente a lógica de conexão do cliente, para enviar as mensagens periodicas
+    e estabeleça a conexão TCP para uso de actuator
+-   **Envio UDP de Broker para cliente**: Implemente a lógica do envio periodico de mensagens
+    recebidas dos devices para os clientes
+-   **Envio UDP de Devices**: Implemente a lógica do envio periodico de mensagens
+    via UDP no Sensors e Actuator e implemente a lógica no broker para recebimento
 -   **Atualização do Protocolo de Descoberta**: Modifique a definição do
-    `DiscoverMessage` para incluir os IPs do broker. Isso permitirá que
-    os atuadores descubram e salvem o IP do broker para comunicação.
+    `DiscoverMessage` para incluir o endereço do broker. Será necessário pois
+    os atuadores estabelecem conexão TCP com o broker além da UDP.
     Atualize o arquivo `messages.proto` para incluir:
 
             message DiscoverMessage {
                 repeated string broker_ips = 1;
             }
-
 -   **Simular o Atuador**: Implemente o `SimulatedActuator.py` com base
-    na estrutura do `SimulatedSensor.py`. O atuador precisará simular o
-    comportamento do mundo real e enviar as mensagens multicast
-    apropriadas para comunicar com os outros componentes. Exemplo de
-    `SimulatedActuator.py`:
+    na estrutura do `SimulatedSensor.py`. Além das funcionalidades do Sensor,
+    ele deve estabelecer uma conexão TCP com o broker para receber comandos.
+-   **Fazer os próximos atuadores**: Implemente o `SimulatedActuator.py` com base
+    na estrutura do `SimulatedSensor.py`. Além das funcionalidades do Sensor,
+    ele deve estabelecer uma conexão TCP com o broker para receber comandos.
 
-            import socket
-            import struct
-            from messages import messages_pb2
-
-            class SimulatedActuator:
-                def __init__(self, ip, port):
-                    self.ip = ip
-                    self.port = port
-                    self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-
-                def send_message(self, message):
-                    self.sock.sendto(message.encode(), (self.ip, self.port))
-
-                def receive_message(self):
-                    data, addr = self.sock.recvfrom(1024)
-                    return data
-
-                def discover_broker(self):
-                    # Envia uma mensagem multicast de descoberta
-                    discover_message = messages_pb2.DiscoverMessage()
-                    discover_message.broker_ips.append(self.ip)
-                    self.send_message(discover_message.SerializeToString())
-
-            if __name__ == "__main__":
-                actuator = SimulatedActuator('192.168.1.100', 5005)
-                actuator.discover_broker()
-
-# Contribuindo
-
-Sinta-se à vontade para submeter um pull request caso queira contribuir
-com o projeto. Certifique-se de seguir as convenções de codificação e
-documentar quaisquer mudanças feitas.
-
-# Licença
-
-Este projeto é licenciado sob a Licença MIT - veja o arquivo `LICENSE`
-para mais detalhes.
+# TODOS EXTRAS
+-   **Multicast periodico**: Seria legal se os multicasts fossem periodicos e se um dispositivo não estivesse ele fechasse o socket
