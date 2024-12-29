@@ -82,6 +82,23 @@ executando o script `launch.sh`.
 
             ./launch.sh
 
+#   Mensagens:
+ClientMessage.request
+"CONNECT"
+"DISCONNECT"
+"GET_DEVICE_STATE"
+"GET_DEVICE_STATE_*ID*"
+"CHANGE_DEVICE_STATE_*ID*_*STATE*"
+
+message ClientResponse {
+    string response = 1; // Resposta do Broker para o cliente
+}
+DiscoverMessage.requests:
+"DISCOVER_DEVICES"
+
+
+
+
 # TODOS TEÓRICOS ESSENCIAIS O QUANTO ANTES
 -   **Documentar mensagens**: Defina os tipos de mensagens que serão trocadas entre clientes e broker e entre broker e devices, além dos dados, existem mensagens de controle essenciais como conexão, desconexão etc. Defini-las antes da implementação seria melhor
 
