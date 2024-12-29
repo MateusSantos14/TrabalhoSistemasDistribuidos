@@ -1,0 +1,3 @@
+protoc --python_out=messages messages.proto
+protoc --go_out=./messages --go_opt=paths=source_relative messages.proto
+
