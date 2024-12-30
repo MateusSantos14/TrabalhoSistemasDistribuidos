@@ -21,4 +21,5 @@ class CarLogic:
 
     def get_data(self):
         self.index+=self.step
-        return self.coordinates[self.index%len(self.coordinates)]
+        data = self.coordinates[self.index%len(self.coordinates)]
+        return f"{data[0]}|{data[1]}"

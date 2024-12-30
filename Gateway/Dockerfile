@@ -20,7 +20,8 @@ RUN apt-get update && apt-get install -y protobuf-compiler
 RUN go build -o gateway ./gateway.go
 
 # Exponha a porta do contêiner (se necessário)
-EXPOSE 8888
+EXPOSE 9990
+EXPOSE 9998
 
 # Comando para rodar o aplicativo
 CMD ["./gateway"]

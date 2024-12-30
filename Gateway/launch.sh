@@ -1,2 +1,3 @@
 sudo docker build -t my-gateway .
-sudo docker run -p 9998:9998 my-gateway
+#docker run -p 9990:9990 --network my-network my-gateway
+docker run -p 9990:9990 my-gateway

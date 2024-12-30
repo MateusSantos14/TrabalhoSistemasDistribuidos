@@ -1,4 +1,5 @@
 cp messages/messages.proto Gateway/messages/messages.proto
 rm Gateway/messages/messages.pb.go
 protoc --go_out=. --go_opt=paths=source_relative Gateway/messages/messages.proto
+rm Device-CarLoc/messages/messages_pb2.py
 python -m grpc_tools.protoc -I ./messages --python_out=Device-CarLoc/messages --grpc_python_out=messages messages.proto

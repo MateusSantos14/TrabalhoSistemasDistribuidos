@@ -24,7 +24,7 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0emessages.proto\x12\x08messages\" \n\rClientMessage\x12\x0f\n\x07request\x18\x01 \x01(\t\"\"\n\x0e\x43lientResponse\x12\x10\n\x08response\x18\x01 \x01(\t\"0\n\rDeviceMessage\x12\x11\n\tdevice_id\x18\x01 \x01(\t\x12\x0c\n\x04\x64\x61ta\x18\x02 \x01(\t\"5\n\x0e\x44\x65viceResponse\x12\x11\n\tdevice_id\x18\x01 \x01(\t\x12\x10\n\x08response\x18\x02 \x01(\t\"\"\n\x0f\x44iscoverMessage\x12\x0f\n\x07request\x18\x01 \x01(\t\"M\n\x10\x44iscoverResponse\x12\x11\n\tdevice_id\x18\x01 \x01(\t\x12\n\n\x02ip\x18\x02 \x01(\t\x12\x0c\n\x04port\x18\x03 \x01(\x05\x12\x0c\n\x04type\x18\x04 \x01(\x05\x42&Z$github.com/username/gateway/messagesb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0emessages.proto\x12\x08messages\" \n\rClientMessage\x12\x0f\n\x07request\x18\x01 \x01(\t\"\"\n\x0e\x43lientResponse\x12\x10\n\x08response\x18\x01 \x01(\t\"0\n\rDeviceMessage\x12\x11\n\tdevice_id\x18\x01 \x01(\t\x12\x0c\n\x04\x64\x61ta\x18\x02 \x01(\t\"5\n\x0e\x44\x65viceResponse\x12\x11\n\tdevice_id\x18\x01 \x01(\t\x12\x10\n\x08response\x18\x02 \x01(\t\"<\n\x0f\x44iscoverMessage\x12\x0f\n\x07request\x18\x01 \x01(\t\x12\n\n\x02ip\x18\x02 \x01(\t\x12\x0c\n\x04port\x18\x03 \x01(\x05\"M\n\x10\x44iscoverResponse\x12\x11\n\tdevice_id\x18\x01 \x01(\t\x12\n\n\x02ip\x18\x02 \x01(\t\x12\x0c\n\x04port\x18\x03 \x01(\x05\x12\x0c\n\x04type\x18\x04 \x01(\x05\x42&Z$github.com/username/gateway/messagesb\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -41,7 +41,7 @@ if not _descriptor._USE_C_DESCRIPTORS:
   _globals['_DEVICERESPONSE']._serialized_start=148
   _globals['_DEVICERESPONSE']._serialized_end=201
   _globals['_DISCOVERMESSAGE']._serialized_start=203
-  _globals['_DISCOVERMESSAGE']._serialized_end=237
-  _globals['_DISCOVERRESPONSE']._serialized_start=239
-  _globals['_DISCOVERRESPONSE']._serialized_end=316
+  _globals['_DISCOVERMESSAGE']._serialized_end=263
+  _globals['_DISCOVERRESPONSE']._serialized_start=265
+  _globals['_DISCOVERRESPONSE']._serialized_end=342
 # @@protoc_insertion_point(module_scope)

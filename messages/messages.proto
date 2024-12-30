@@ -27,6 +27,8 @@ message DeviceResponse {
 // Mensagens de descoberta
 message DiscoverMessage {
     string request = 1; // Exemplo: "DISCOVER_DEVICES"
+    string ip = 2;        // Endereço IP do broker
+    int32 port = 3;       // Porta do broker
 }
 
 message DiscoverResponse {
