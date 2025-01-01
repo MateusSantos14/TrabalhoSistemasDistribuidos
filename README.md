@@ -114,7 +114,7 @@ Olá a todos, comecei a realização do trabalho, mas ainda falta muito a ser fe
 -   **Refatoração de código**: Como podem ver, o código foi feito num ritmo de prova de conceito, 
     por isso, seria interessante que fosse realizada a leitura do código e observada possíveis melhorias: Os devices são a parte mais simples e fácil por serem genéricos.
     Por sua vez, seria interessante o gateway ser mais robusto, observem o que pode ser melhorado nele(funções mais claras e as funcionaldiades que faltam)
--   **CONEXÃO UDP E TCP(IPS E PORTAS)**: 
+-   **CONEXÃO UDP E TCP(IPS E PORTAS)**: Não conseguir realizar o envio de uma mensagem para o gateway atraves do device utilizando IP e porta. Ainda não procurei a fundo o motivo, vou descrever o problema brevemente. O device, consegue enviar uma mensagem UDP porém o gateway não consegue fazer bind com IP e porta. Para o UDP fiz funcionar recebendo a mensagem de qualquer IP na porta definida, porém, não sei se funcionara no TCP e se essa implementação faz sentido.
 
 # TODOS EXTRAS
 -   **Multicast periodico**: Seria legal se os multicasts fossem periodicos e se um dispositivo não estivesse ele fechasse o socket.
