@@ -96,33 +96,25 @@ message ClientResponse {
 DiscoverMessage.requests:
 "DISCOVER_DEVICES"
 
+# RECADOS
 
+Olá a todos, comecei a realização do trabalho, mas ainda falta muito a ser feito e conto com vocês.
 
-
-# TODOS TEÓRICOS ESSENCIAIS O QUANTO ANTES
--   **Documentar mensagens**: Defina os tipos de mensagens que serão trocadas entre clientes e broker e entre broker e devices, além dos dados, existem mensagens de controle essenciais como conexão, desconexão etc. Defini-las antes da implementação seria melhor
 
 # TODOS
 -   **Conexão do cliente**: Implemente a lógica de conexão do cliente, para enviar as mensagens periodicas
-    e estabeleça a conexão TCP para uso de actuator
+    e estabeleça a conexão TCP para uso de actuator.(Inserir código do cliente etc)
 -   **Envio UDP de Broker para cliente**: Implemente a lógica do envio periodico de mensagens
     recebidas dos devices para os clientes
--   **Envio UDP de Devices**: Implemente a lógica do envio periodico de mensagens
-    via UDP no Sensors e Actuator e implemente a lógica no broker para recebimento
--   **Atualização do Protocolo de Descoberta**: Modifique a definição do
-    `DiscoverMessage` para incluir o endereço do broker. Será necessário pois
-    os atuadores estabelecem conexão TCP com o broker além da UDP.
-    Atualize o arquivo `messages.proto` para incluir:
-
-            message DiscoverMessage {
-                repeated string broker_ips = 1;
-            }
 -   **Simular o Atuador**: Implemente o `SimulatedActuator.py` com base
-    na estrutura do `SimulatedSensor.py`. Além das funcionalidades do Sensor,
-    ele deve estabelecer uma conexão TCP com o broker para receber comandos.
--   **Fazer os próximos atuadores**: Implemente o `SimulatedActuator.py` com base
-    na estrutura do `SimulatedSensor.py`. Além das funcionalidades do Sensor,
-    ele deve estabelecer uma conexão TCP com o broker para receber comandos.
+    na estrutura do `SimulatedSensor.py`. Além das funcionalidades do Sensor. Precisa implementar
+    comunicação TCP.
+-   **Implementar disconnect do broker**: Quando fechar o broker, mandar multicast para os devices pararem de enviar mensagem e implementar
+    essa função no device.
+-   **Refatoração de código**: Como podem ver, o código foi feito num ritmo de prova de conceito, 
+    por isso, seria interessante que fosse realizada a leitura do código e observada possíveis melhorias: Os devices são a parte mais simples e fácil por serem genéricos.
+    Por sua vez, seria interessante o gateway ser mais robusto, observem o que pode ser melhorado nele(funções mais claras e as funcionaldiades que faltam)
+-   **CONEXÃO UDP E TCP(IPS E PORTAS)**: 
 
 # TODOS EXTRAS
--   **Multicast periodico**: Seria legal se os multicasts fossem periodicos e se um dispositivo não estivesse ele fechasse o socket
+-   **Multicast periodico**: Seria legal se os multicasts fossem periodicos e se um dispositivo não estivesse ele fechasse o socket.
