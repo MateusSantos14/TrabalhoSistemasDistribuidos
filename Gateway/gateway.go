@@ -231,6 +231,99 @@ func (g *Gateway) processDeviceMessage(deviceMsg *messages.DeviceMessage) {
 	// Lógica de processamento segura
 }
 
+// Add this new function to handle client connections
+func (g *Gateway) startTCPServer(port int) {
+	listener, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
+	if err != nil {
+			log.Fatalf("Failed to start TCP server: %v", err)
+	}
+	defer listener.Close()
+
+	log.Printf("TCP Server listening for clients on port %d", port)
+
+	for {
+			conn, err := listener.Accept()
+			if err != nil {
+					log.Printf("Error accepting connection: %v", err)
+					continue
+			}
+			go g.handleClientConnection(conn)
+	}
+}
+
+// Add this new function to handle individual client connections
+func (g *Gateway) handleClientConnection(conn net.Conn) {
+	defer conn.Close()
+	
+	buf := make([]byte, 1024)
+	for {
+			n, err := conn.Read(buf)
+			if err != nil {
+					log.Printf("Error reading from client: %v", err)
+					return
+			}
+
+			// Unmarshal the Protobuf message
+			var clientMsg messages.ClientMessage
+			err = proto.Unmarshal(buf[:n], &clientMsg)
+			if err != nil {
+					log.Printf("Failed to unmarshal client message: %v", err)
+					continue
+			}
+
+			log.Printf("Received client message: %s", clientMsg.Request)
+
+			// Process the client message and prepare response
+			response := g.processClientMessage(&clientMsg)
+
+			// Serialize the response
+			responseData, err := proto.Marshal(response)
+			if err != nil {
+					log.Printf("Failed to marshal response: %v", err)
+					continue
+			}
+
+			// Send the response back to the client
+			_, err = conn.Write(responseData)
+			if err != nil {
+					log.Printf("Failed to send response to client: %v", err)
+					return
+			}
+	}
+}
+
+// Add this new function to process client messages
+func (g *Gateway) processClientMessage(clientMsg *messages.ClientMessage) *messages.ClientResponse {
+	g.mutex.RLock()
+	defer g.mutex.RUnlock()
+
+	response := &messages.ClientResponse{}
+
+	// Process different types of requests
+	switch clientMsg.Request {
+	case "GET_DEVICES":
+			// Create a list of connected devices
+			deviceList := "Connected devices:\n"
+			for id, device := range g.devices {
+					deviceList += fmt.Sprintf("ID: %s, IP: %s, Port: %d, Type: %d\n", 
+							id, device.IP, device.Port, device.Type)
+			}
+			response.Response = deviceList
+
+	case "GET_DEVICE_STATE":
+			// You can add more specific device state handling here
+			response.Response = fmt.Sprintf("Yo nigga! im the server. got ya message")
+			// response.Response = fmt.Sprintf("Currently managing %d devices", len(g.devices))
+
+	default:
+			// Echo back the request if it's not recognized
+			response.Response = fmt.Sprintf("Received request: %s", clientMsg.Request)
+	}
+
+	log.Printf("Sending response to client: %s", response.Response)
+	return response
+}
+
 func getLocalIP() string {
 	conn, err := net.Dial("udp", "8.8.8.8:80")
 	if err != nil {
@@ -249,6 +342,9 @@ func main() {
 
 	// Start multicast discovery in a separate goroutine.
 	go gateway.discoverDevices("224.0.0.1:9999")
+
+	// Start TCP server for client connections
+	go gateway.startTCPServer(9990)
 
 	// This is a simple way to keep the main function alive while the goroutine runs.
 	select {}
