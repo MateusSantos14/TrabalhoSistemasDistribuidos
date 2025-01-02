@@ -46,7 +46,7 @@ class GatewayClient:
             print("\nEncerrando cliente...")
 
 # Configurações do Gateway
-GATEWAY_IP = "172.17.0.3"  # Substitua pelo IP do gateway
+GATEWAY_IP = "172.17.0.2"  # Substitua pelo IP do gateway
 TCP_PORT = 9991
 
 if __name__ == "__main__":
