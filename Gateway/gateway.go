@@ -6,7 +6,7 @@ import (
 	"net"
 	"sync"
 	"time"
-
+	"strings"
 	"github.com/username/gateway/messages"
 	"google.golang.org/protobuf/proto"
 )
@@ -362,11 +362,6 @@ func (g *Gateway) processClientMessage(clientMsg *messages.ClientMessage) *messa
         device, exists := g.devices[deviceNum]
         if !exists {
             response.Response = fmt.Sprintf("Device %s not found", deviceNum)
-            return response
-        }
-
-        if device.Type != 1 {
-            response.Response = fmt.Sprintf("Device %s does not support state changes", deviceNum)
             return response
         }
 
