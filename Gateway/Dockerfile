@@ -21,6 +21,7 @@ RUN go build -o gateway ./gateway.go
 
 # Exponha a porta do contêiner (se necessário)
 EXPOSE 9990
+EXPOSE 9991
 EXPOSE 9998
 
 # Comando para rodar o aplicativo

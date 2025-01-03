@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"strings"
 	"sync"
 	"time"
 
@@ -13,12 +14,11 @@ import (
 
 // Device represents a discovered device.
 type Device struct {
-	ID      string
-	IP      string
-	Port    int
-	Type    int          // Type of device (0 or 1)
-	UDPSock *net.UDPConn // UDP socket for communication
-	TCPSock net.Conn     // Optional TCP connection
+	ID        string
+	IP        string
+	Port      int
+	Type      int    // Type of device (0 or 1)
+	LastState string // Último estado recebido do dispositivo
 }
 
 // Gateway holds the state of devices and clients.
@@ -34,6 +34,160 @@ func NewGateway() *Gateway {
 		devices: make(map[string]Device),
 		clients: make(map[string]net.Conn),
 	}
+}
+
+// handleClient escuta na porta TCP e processa mensagens dos clientes
+func (g *Gateway) handleClient(port int) {
+	// Inicia o listener TCP
+	listener, err := net.Listen("tcp", fmt.Sprintf("0.0.0.0:%d", port))
+	if err != nil {
+		log.Fatalf("Erro ao iniciar listener TCP: %v", err)
+	}
+	defer listener.Close()
+
+	log.Printf("Gateway ouvindo em TCP na porta %d", port)
+
+	for {
+		// Aceita conexões de clientes
+		conn, err := listener.Accept()
+		if err != nil {
+			log.Printf("Erro ao aceitar conexão: %v", err)
+			continue
+		}
+
+		// Processa a conexão em uma nova goroutine
+		go g.processClient(conn)
+	}
+}
+
+// processClient lê e processa mensagens de um cliente
+func (g *Gateway) processClient(conn net.Conn) {
+	defer conn.Close()
+
+	buf := make([]byte, 1024) // Buffer para armazenar mensagens
+
+	for {
+		n, err := conn.Read(buf)
+		if err != nil {
+			log.Printf("Erro ao ler do cliente: %v", err)
+			return
+		}
+
+		// Deserializa a mensagem recebida usando Protobuf
+		var clientMsg messages.ClientMessage
+		err = proto.Unmarshal(buf[:n], &clientMsg)
+		if err != nil {
+			log.Printf("Erro ao deserializar mensagem do cliente: %v", err)
+			continue
+		}
+
+		response, err := g.processClientMessage(&clientMsg)
+
+		// Serializa a resposta
+		serializedResp, err := proto.Marshal(response)
+		if err != nil {
+			log.Printf("Erro ao serializar resposta para o cliente: %v", err)
+			continue
+		}
+
+		// Envia a resposta ao cliente
+		_, err = conn.Write(serializedResp)
+		if err != nil {
+			log.Printf("Erro ao enviar resposta ao cliente: %v", err)
+			return
+		}
+	}
+}
+
+func (g *Gateway) processClientMessage(clientMsg *messages.ClientMessage) (*messages.ClientResponse, error) {
+	g.mutex.RLock() // Use read lock to allow concurrent reads
+	defer g.mutex.RUnlock()
+
+	log.Printf("Processing ClientMessage: Request=%s", clientMsg.Request)
+
+	// Split the request to parse command and parameters
+	parts := strings.Split(clientMsg.Request, "|")
+	if len(parts) != 2 {
+		log.Printf("invalid request format, expected 'COMMAND|PARAM'")
+	}
+
+	command := parts[0]
+	deviceID := parts[1]
+
+	switch command {
+	case "GET_DEVICE_STATE":
+		// Check if the device exists
+		device, exists := g.devices[deviceID]
+		if !exists {
+			return &messages.ClientResponse{
+				Response: fmt.Sprintf("Device ID=%s not found", deviceID),
+			}, nil
+		}
+		// Return the device's last state
+		return &messages.ClientResponse{
+			Response: fmt.Sprintf("Device ID=%s, LastState=%s", deviceID, device.LastState),
+		}, nil
+	case "SET_DEVICE_STATE":
+		log.Printf("Setting new device state")
+		device, exists := g.devices[deviceID]
+		if !exists {
+			return &messages.ClientResponse{
+				Response: fmt.Sprintf("Device ID=%s not found", deviceID),
+			}, nil
+		}
+		// Set new device state
+		new_data := parts[2]
+		device.LastState = new_data
+		g.sendMessageToDevice(deviceID, new_data)
+		return &messages.ClientResponse{
+			Response: fmt.Sprintf("Device ID=%s, LastStateChanged=%s ", deviceID, device.LastState),
+		}, nil
+
+	default:
+		return &messages.ClientResponse{
+			Response: fmt.Sprintf("Unknown command: %s", command),
+		}, nil
+	}
+}
+
+func (g *Gateway) sendMessageToDevice(deviceID, message string) error {
+	g.mutex.RLock()
+	defer g.mutex.RUnlock()
+
+	device, exists := g.devices[deviceID]
+	if !exists {
+		return fmt.Errorf("device ID=%s not found", deviceID)
+	}
+
+	switch device.Type {
+	case 0: // Sensor
+		log.Printf("Sensor can't receive messages.")
+	case 1: // Actuator
+		if device.IP == "" || device.Port == 0 {
+			return fmt.Errorf("actuator ID=%s has invalid address or port", deviceID)
+		}
+
+		// Create a new TCP connection for the message
+		address := fmt.Sprintf("%s:%d", device.IP, device.Port)
+
+		conn, err := net.Dial("tcp", address)
+		if err != nil {
+			return fmt.Errorf("failed to connect to actuator ID=%s: %v", deviceID, err)
+		}
+		defer conn.Close()
+
+		// Send the message
+		_, err = conn.Write([]byte(message))
+		if err != nil {
+			return fmt.Errorf("failed to send message to actuator ID=%s: %v", deviceID, err)
+		}
+
+		log.Printf("Message sent to actuator: ID=%s, Address=%s, Message=%s", deviceID, address, message)
+	default:
+		return fmt.Errorf("unknown device type: ID=%s, Type=%d", deviceID, device.Type)
+	}
+
+	return nil
 }
 
 // discoverDevices sends a discovery request periodically and listens for responses.
@@ -53,7 +207,9 @@ func (g *Gateway) discoverDevices(multicastAddr string) {
 
 	go g.handleUDPConnection(udpConn)
 
-	ticker := time.NewTicker(30 * time.Second) // Set the interval for discovery (30 seconds)
+	go g.handleClient(9991)
+
+	ticker := time.NewTicker(5 * time.Second) // Set the interval for discovery (30 seconds)
 	defer ticker.Stop()
 
 	for {
@@ -94,9 +250,9 @@ func (g *Gateway) discoverDevices(multicastAddr string) {
 	}
 }
 
-// listenForResponses listens for responses to the multicast discovery request.
+// listenForResponses listens for responses to the multicast discovery request for a limited duration.
 func (g *Gateway) listenForResponses(multicastAddr string) {
-	// Set up the UDP listener to listen on the multicast address
+	// Resolve the UDP address
 	addr, err := net.ResolveUDPAddr("udp", multicastAddr)
 	if err != nil {
 		log.Fatalf("Failed to resolve UDP address: %v", err)
@@ -112,25 +268,45 @@ func (g *Gateway) listenForResponses(multicastAddr string) {
 	// Buffer to read incoming data
 	buf := make([]byte, 1024)
 
+	// Channel to signal timeout
+	timeout := time.After(2 * time.Second)
+
 	for {
-		// Receive the message
-		n, _, err := conn.ReadFromUDP(buf)
-		if err != nil {
-			log.Printf("Error reading from UDP connection: %v", err)
-			continue
-		}
+		select {
+		case <-timeout:
+			log.Println("Timeout reached: Stopping response listening")
+			return
+		default:
+			// Set a short read timeout to allow checking the timeout channel
+			conn.SetReadDeadline(time.Now().Add(100 * time.Millisecond))
 
-		// Unmarshal the received message into a DiscoverResponse
-		var discoverResp messages.DiscoverResponse
-		err = proto.Unmarshal(buf[:n], &discoverResp)
-		if err != nil {
-			log.Printf("Failed to unmarshal DiscoverResponse: %v", err)
-			continue
-		}
+			// Receive the message
+			n, _, err := conn.ReadFromUDP(buf)
+			if err != nil {
+				if !isTimeoutError(err) {
+					log.Printf("Error reading from UDP connection: %v", err)
+				}
+				continue
+			}
 
-		// Process the discovered device
-		g.processDevice(&discoverResp)
+			// Unmarshal the received message into a DiscoverResponse
+			var discoverResp messages.DiscoverResponse
+			err = proto.Unmarshal(buf[:n], &discoverResp)
+			if err != nil {
+				log.Printf("Failed to unmarshal DiscoverResponse: %v", err)
+				continue
+			}
+
+			// Process the discovered device
+			g.processDevice(&discoverResp)
+		}
 	}
+}
+
+// isTimeoutError checks if the error is a timeout error.
+func isTimeoutError(err error) bool {
+	netErr, ok := err.(net.Error)
+	return ok && netErr.Timeout()
 }
 func (g *Gateway) processDevice(discoverResp *messages.DiscoverResponse) {
 	g.mutex.Lock()
@@ -144,23 +320,9 @@ func (g *Gateway) processDevice(discoverResp *messages.DiscoverResponse) {
 		Type: int(discoverResp.Type),
 	}
 
-	// Se o tipo do dispositivo for 1, tentamos estabelecer uma conexão TCP
-	if device.Type == 1 {
-		tcpConn, err := net.Dial("tcp", fmt.Sprintf("%s:%d", device.IP, device.Port))
-		if err == nil {
-			device.TCPSock = tcpConn
-		} else {
-			log.Printf("Failed to establish TCP connection for device %s: %v", discoverResp.DeviceId, err)
-		}
-	}
-
 	// Salva o dispositivo descoberto
 	g.devices[device.ID] = device
 	log.Printf("Discovered device: ID=%s, IP=%s, Port=%d, Type=%d", device.ID, device.IP, device.Port, device.Type)
-
-	if device.TCPSock != nil {
-		go g.handleTCPConnection(device.TCPSock, device.ID)
-	}
 }
 
 func (g *Gateway) handleUDPConnection(conn *net.UDPConn) {
@@ -228,7 +390,14 @@ func (g *Gateway) processDeviceMessage(deviceMsg *messages.DeviceMessage) {
 
 	log.Printf("Processing DeviceMessage: ID=%s, Data=%s", deviceMsg.DeviceId, deviceMsg.Data)
 
-	// Lógica de processamento segura
+	device, exists := g.devices[deviceMsg.DeviceId]
+	if exists {
+		device.LastState = deviceMsg.Data
+		g.devices[deviceMsg.DeviceId] = device
+		log.Printf("Device ID=%s already discovered. Updated LastState to: %s", deviceMsg.DeviceId, deviceMsg.Data)
+	} else {
+		log.Printf("Device ID=%s not discovered. Ignoring message or add it if required.", deviceMsg.DeviceId)
+	}
 }
 
 func getLocalIP() string {
@@ -249,6 +418,8 @@ func main() {
 
 	// Start multicast discovery in a separate goroutine.
 	go gateway.discoverDevices("224.0.0.1:9999")
+
+	println("Gateway IP = %s", getLocalIP())
 
 	// This is a simple way to keep the main function alive while the goroutine runs.
 	select {}
