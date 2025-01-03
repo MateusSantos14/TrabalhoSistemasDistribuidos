@@ -235,19 +235,19 @@ func (g *Gateway) processDeviceMessage(deviceMsg *messages.DeviceMessage) {
 func (g *Gateway) startTCPServer(port int) {
 	listener, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
 	if err != nil {
-			log.Fatalf("Failed to start TCP server: %v", err)
+        log.Fatalf("Failed to start TCP server: %v", err)
 	}
 	defer listener.Close()
 
 	log.Printf("TCP Server listening for clients on port %d", port)
 
 	for {
-			conn, err := listener.Accept()
-			if err != nil {
-					log.Printf("Error accepting connection: %v", err)
-					continue
-			}
-			go g.handleClientConnection(conn)
+        conn, err := listener.Accept()
+        if err != nil {
+                log.Printf("Error accepting connection: %v", err)
+                continue
+        }
+        go g.handleClientConnection(conn)
 	}
 }
 
@@ -257,38 +257,38 @@ func (g *Gateway) handleClientConnection(conn net.Conn) {
 	
 	buf := make([]byte, 1024)
 	for {
-			n, err := conn.Read(buf)
-			if err != nil {
-					log.Printf("Error reading from client: %v", err)
-					return
-			}
+        n, err := conn.Read(buf)
+        if err != nil {
+            log.Printf("Error reading from client: %v", err)
+            return
+        }
 
-			// Unmarshal the Protobuf message
-			var clientMsg messages.ClientMessage
-			err = proto.Unmarshal(buf[:n], &clientMsg)
-			if err != nil {
-					log.Printf("Failed to unmarshal client message: %v", err)
-					continue
-			}
+        // Unmarshal the Protobuf message
+        var clientMsg messages.ClientMessage
+        err = proto.Unmarshal(buf[:n], &clientMsg)
+        if err != nil {
+            log.Printf("Failed to unmarshal client message: %v", err)
+            continue
+        }
 
-			log.Printf("Received client message: %s", clientMsg.Request)
+        log.Printf("Hey. Received client message: %s", clientMsg.Request)
 
-			// Process the client message and prepare response
-			response := g.processClientMessage(&clientMsg)
+        // Process the client message and prepare response
+        response := g.processClientMessage(&clientMsg)
 
-			// Serialize the response
-			responseData, err := proto.Marshal(response)
-			if err != nil {
-					log.Printf("Failed to marshal response: %v", err)
-					continue
-			}
+        // Serialize the response
+        responseData, err := proto.Marshal(response)
+        if err != nil {
+            log.Printf("Failed to marshal response: %v", err)
+            continue
+        }
 
-			// Send the response back to the client
-			_, err = conn.Write(responseData)
-			if err != nil {
-					log.Printf("Failed to send response to client: %v", err)
-					return
-			}
+        // Send the response back to the client
+        _, err = conn.Write(responseData)
+        if err != nil {
+            log.Printf("Failed to send response to client: %v", err)
+            return
+        }
 	}
 }
 
@@ -298,26 +298,120 @@ func (g *Gateway) processClientMessage(clientMsg *messages.ClientMessage) *messa
 	defer g.mutex.RUnlock()
 
 	response := &messages.ClientResponse{}
+	parts := strings.Split(clientMsg.Request, "|")
+	command := parts[0]
 
-	// Process different types of requests
-	switch clientMsg.Request {
-	case "GET_DEVICES":
-			// Create a list of connected devices
-			deviceList := "Connected devices:\n"
-			for id, device := range g.devices {
-					deviceList += fmt.Sprintf("ID: %s, IP: %s, Port: %d, Type: %d\n", 
-							id, device.IP, device.Port, device.Type)
-			}
-			response.Response = deviceList
+    log.Printf("Received command: %s", clientMsg.Request)
+    log.Printf("Split parts: %v", parts)
 
+	switch command {
 	case "GET_DEVICE_STATE":
-			// You can add more specific device state handling here
-			response.Response = fmt.Sprintf("Yo nigga! im the server. got ya message")
-			// response.Response = fmt.Sprintf("Currently managing %d devices", len(g.devices))
+        deviceNum := parts[1]
+        device, exists := g.devices[deviceNum]
 
+        if !exists {
+            response.Response = fmt.Sprintf("Device %s not found", deviceNum)
+            return response
+        }
+
+        // Send GET_STATE request to device
+        if device.TCPSock != nil {
+            deviceMsg := &messages.DeviceMessage{
+                DeviceId: deviceNum,
+                Data:     "GET_STATE",
+            }
+            
+            data, err := proto.Marshal(deviceMsg)
+            if err != nil {
+                response.Response = fmt.Sprintf("Error preparing device message: %v", err)
+                return response
+            }
+            
+            // Send request
+            _, err = device.TCPSock.Write(data)
+            if err != nil {
+                response.Response = fmt.Sprintf("Error sending request to device: %v", err)
+                return response
+            }
+
+            // Read response
+            buf := make([]byte, 1024)
+            device.TCPSock.SetReadDeadline(time.Now().Add(5 * time.Second))
+            n, err := device.TCPSock.Read(buf)
+            if err != nil {
+                response.Response = fmt.Sprintf("Error reading from device: %v", err)
+                return response
+            }
+
+            // Parse device response
+            deviceResponse := &messages.DeviceMessage{}
+            err = proto.Unmarshal(buf[:n], deviceResponse)
+            if err != nil {
+                response.Response = fmt.Sprintf("Error parsing device response: %v", err)
+                return response
+            }
+
+            response.Response = fmt.Sprintf("Device %s: %s", deviceNum, deviceResponse.Data)
+        } else {
+            response.Response = fmt.Sprintf("No active connection to device %s", deviceNum)
+        }
+    case "SET_DEVICE_STATE":
+        deviceNum := parts[1]
+        stateValue := parts[2]
+
+        device, exists := g.devices[deviceNum]
+        if !exists {
+            response.Response = fmt.Sprintf("Device %s not found", deviceNum)
+            return response
+        }
+
+        if device.Type != 1 {
+            response.Response = fmt.Sprintf("Device %s does not support state changes", deviceNum)
+            return response
+        }
+
+        if device.TCPSock != nil {
+            deviceMsg := &messages.DeviceMessage{
+                DeviceId: deviceNum,
+                Data:     fmt.Sprintf("SET_STATE:%s", stateValue),
+            }
+            
+            data, err := proto.Marshal(deviceMsg)
+            if err != nil {
+                response.Response = fmt.Sprintf("Error preparing device message: %v", err)
+                return response
+            }
+            
+            // Send request
+            _, err = device.TCPSock.Write(data)
+            if err != nil {
+                response.Response = fmt.Sprintf("Error sending state to device: %v", err)
+                return response
+            }
+
+            // Read confirmation response
+            buf := make([]byte, 1024)
+            device.TCPSock.SetReadDeadline(time.Now().Add(5 * time.Second))
+            n, err := device.TCPSock.Read(buf)
+            if err != nil {
+                response.Response = fmt.Sprintf("Error reading confirmation from device: %v", err)
+                return response
+            }
+
+            // Parse device response
+            deviceResponse := &messages.DeviceMessage{}
+            err = proto.Unmarshal(buf[:n], deviceResponse)
+            if err != nil {
+                response.Response = fmt.Sprintf("Error parsing device response: %v", err)
+                return response
+            }
+
+            response.Response = fmt.Sprintf("Device %s: %s", deviceNum, deviceResponse.Data)
+        } else {
+            response.Response = fmt.Sprintf("No active connection to device %s", deviceNum)
+        }
 	default:
-			// Echo back the request if it's not recognized
-			response.Response = fmt.Sprintf("Received request: %s", clientMsg.Request)
+        response.Response = fmt.Sprintf("Unknown command: %s", command)
 	}
 
 	log.Printf("Sending response to client: %s", response.Response)
