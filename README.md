@@ -77,18 +77,14 @@ dinâmica e comunicação entre os dispositivos.
     configura o ambiente necessário.
 
 # Como Rodar
-**Iniciar os Containers**: Você pode iniciar os containers
-executando o script `launch.sh`.
-
-            ./launch.sh
+-   **Iniciar os Devices**: Rode todos os containers de device
+-   **Iniciar o gateway**: Rode o container do gateway e confira o IP que ele ira printar
+-   **Rode o cliente**: Altere no código o IP do destino e rode o cliente(PRVISÓRIO)
 
 #   Mensagens:
 ClientMessage.request
-"CONNECT"
-"DISCONNECT"
-"GET_DEVICE_STATE"
-"GET_DEVICE_STATE_*ID*"
-"CHANGE_DEVICE_STATE_*ID*_*STATE*"
+"GET_DEVICE_STATE|ID"
+"CHANGE_DEVICE_STATE|ID|NEW_STATE"
 
 message ClientResponse {
     string response = 1; // Resposta do Broker para o cliente
@@ -102,19 +98,11 @@ Olá a todos, comecei a realização do trabalho, mas ainda falta muito a ser fe
 
 
 # TODOS
--   **Conexão do cliente**: Implemente a lógica de conexão do cliente, para enviar as mensagens periodicas
-    e estabeleça a conexão TCP para uso de actuator.(Inserir código do cliente etc)
--   **Envio UDP de Broker para cliente**: Implemente a lógica do envio periodico de mensagens
-    recebidas dos devices para os clientes
--   **Simular o Atuador**: Implemente o `SimulatedActuator.py` com base
-    na estrutura do `SimulatedSensor.py`. Além das funcionalidades do Sensor. Precisa implementar
-    comunicação TCP.
+-   **Linkar com cliente GUI**: Temos um cliente em linha de comando funcional, falta o cliente com interface web.
 -   **Implementar disconnect do broker**: Quando fechar o broker, mandar multicast para os devices pararem de enviar mensagem e implementar
     essa função no device.
+-   **Implementar lógica de HeadLight e AC**: A parte da comunicação está funcionando, porém, não temos a lógica dos dispositivos implementada, e o container de Device-AC também não, confiram como está feito em headlight e fazer a lógica dos dispositivos.
 -   **Refatoração de código**: Como podem ver, o código foi feito num ritmo de prova de conceito, 
     por isso, seria interessante que fosse realizada a leitura do código e observada possíveis melhorias: Os devices são a parte mais simples e fácil por serem genéricos.
     Por sua vez, seria interessante o gateway ser mais robusto, observem o que pode ser melhorado nele(funções mais claras e as funcionaldiades que faltam)
--   **CONEXÃO UDP E TCP(IPS E PORTAS)**: Não conseguir realizar o envio de uma mensagem para o gateway atraves do device utilizando IP e porta. Ainda não procurei a fundo o motivo, vou descrever o problema brevemente. O device, consegue enviar uma mensagem UDP porém o gateway não consegue fazer bind com IP e porta. Para o UDP fiz funcionar recebendo a mensagem de qualquer IP na porta definida, porém, não sei se funcionara no TCP e se essa implementação faz sentido.
-
-# TODOS EXTRAS
--   **Multicast periodico**: Seria legal se os multicasts fossem periodicos e se um dispositivo não estivesse ele fechasse o socket.
+-   **REVISAR ESQUEMA DE PORTAS ENTRE CONTAINERS**: A comunicação atual está funcionando, porém, seria interessante conferir se não vai haver algum problema na forma que as    portas foram alocadas.
