@@ -136,6 +136,12 @@ func (g *Gateway) processClientMessage(clientMsg *messages.ClientMessage) (*mess
 			}, nil
 		}
 		// Set new device state
+		if len(parts) != 3 {
+			log.Printf("invalid request format, expected 'COMMAND|PARAM'")
+			return &messages.ClientResponse{
+				Response: fmt.Sprintf("Invalid request format COMMAND|PARAM|DATA"),
+			}, nil
+		}
 		new_data := parts[2]
 		device.LastState = new_data
 		g.sendMessageToDevice(deviceID, new_data)
@@ -159,6 +165,8 @@ func (g *Gateway) sendMessageToDevice(deviceID, message string) error {
 		return fmt.Errorf("device ID=%s not found", deviceID)
 	}
 
+	log.Printf("Sending change message to device ID=%s.", deviceID)
+
 	switch device.Type {
 	case 0: // Sensor
 		log.Printf("Sensor can't receive messages.")
@@ -168,21 +176,42 @@ func (g *Gateway) sendMessageToDevice(deviceID, message string) error {
 		}
 
 		// Create a new TCP connection for the message
-		address := fmt.Sprintf("%s:%d", device.IP, device.Port)
+		localAddress := fmt.Sprintf(":%d", device.Port)
+		remoteAddress := fmt.Sprintf("%s:%d", device.IP, device.Port)
+		/*
+			log.Printf("Sending to ID=%s in %s.", deviceID, address)
 
-		conn, err := net.Dial("tcp", address)
+			conn, err := net.Dial("tcp", address)
+			if err != nil {
+				return fmt.Errorf("failed to connect to actuator ID=%s: %v", deviceID, err)
+			}
+			defer conn.Close()
+		*/
+		localAddr, err := net.ResolveTCPAddr("tcp", localAddress)
 		if err != nil {
-			return fmt.Errorf("failed to connect to actuator ID=%s: %v", deviceID, err)
+			log.Fatalf("Failed to resolve local address: %v", err)
+		}
+
+		// Dial the remote server using the specified source port
+		dialer := &net.Dialer{LocalAddr: localAddr}
+		conn, err := dialer.Dial("tcp", remoteAddress)
+		if err != nil {
+			log.Fatalf("Failed to connect to %s from %s: %v", remoteAddress, localAddress, err)
 		}
 		defer conn.Close()
-
 		// Send the message
-		_, err = conn.Write([]byte(message))
+		deviceResponse := &messages.DeviceResponse{
+			DeviceId: deviceID,
+			Response: message,
+		}
+
+		serializedResp, err := proto.Marshal(deviceResponse)
+		_, err = conn.Write(serializedResp)
 		if err != nil {
 			return fmt.Errorf("failed to send message to actuator ID=%s: %v", deviceID, err)
 		}
 
-		log.Printf("Message sent to actuator: ID=%s, Address=%s, Message=%s", deviceID, address, message)
+		log.Printf("Message sent to actuator: ID=%s, Address=%s, Message=%s", deviceID, remoteAddress, message)
 	default:
 		return fmt.Errorf("unknown device type: ID=%s, Type=%d", deviceID, device.Type)
 	}
@@ -349,35 +378,6 @@ func (g *Gateway) handleUDPConnection(conn *net.UDPConn) {
 
 		log.Printf("Received UDP message from %s: ID=%s, Data=%s",
 			addr.String(), deviceMsg.DeviceId, deviceMsg.Data)
-
-		// Process the DeviceMessage
-		g.processDeviceMessage(&deviceMsg)
-	}
-}
-
-func (g *Gateway) handleTCPConnection(conn net.Conn, deviceID string) {
-	defer conn.Close()
-
-	buf := make([]byte, 1024)
-	localAddr := conn.LocalAddr().String()
-	log.Printf("Gateway listening on TCP: %s", localAddr)
-	for {
-		n, err := conn.Read(buf)
-		if err != nil {
-			log.Printf("TCP read error for device %s: %v", deviceID, err)
-			return
-		}
-
-		// Unmarshal the Protobuf message
-		var deviceMsg messages.DeviceMessage
-		err = proto.Unmarshal(buf[:n], &deviceMsg)
-		if err != nil {
-			log.Printf("Failed to unmarshal TCP message for device %s: %v", deviceID, err)
-			continue
-		}
-
-		log.Printf("Received TCP message from device %s: ID=%s, Data=%s",
-			deviceID, deviceMsg.DeviceId, deviceMsg.Data)
 
 		// Process the DeviceMessage
 		g.processDeviceMessage(&deviceMsg)

@@ -100,7 +100,8 @@ class SimulatedActuator:
                 # Cria um socket TCP para escutar
                 server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-                server_socket.bind((self.broker_ip, self.port))
+                #server_socket.bind((self.broker_ip, self.port))
+                server_socket.bind(("0.0.0.0", self.port))
                 server_socket.listen(5)
 
                 print(f"Actuator listening on {socket.gethostbyname(socket.gethostname())}:{self.port}", flush=True)
@@ -135,6 +136,7 @@ class SimulatedActuator:
                 device_response.ParseFromString(data)
                 print(f"Received DeviceResponse from {addr}: Device ID: {device_response.device_id}, Response: {device_response.response}", flush=True)
                 # You can process the received data or update it in the simulator here
+                self.simulator.set_data(device_response.response)
 
         except Exception as e:
             print(f"Error handling connection from {addr}: {e}", flush=True)
