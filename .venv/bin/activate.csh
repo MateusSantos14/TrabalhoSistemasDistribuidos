@@ -9,17 +9,17 @@ alias deactivate 'test $?_OLD_VIRTUAL_PATH != 0 && setenv PATH "$_OLD_VIRTUAL_PA
 # Unset irrelevant variables.
 deactivate nondestructive
 
-setenv VIRTUAL_ENV "/home/mateus/Desktop/faculdade/distribuidos/trabalho1/TrabalhoSistemasDistribuidos/.venv"
+setenv VIRTUAL_ENV /home/fruet/dev/golang/gateway-iot/.venv
 
 set _OLD_VIRTUAL_PATH="$PATH"
-setenv PATH "$VIRTUAL_ENV/bin:$PATH"
+setenv PATH "$VIRTUAL_ENV/"bin":$PATH"
+setenv VIRTUAL_ENV_PROMPT gateway-iot
 
 
 set _OLD_VIRTUAL_PROMPT="$prompt"
 
 if (! "$?VIRTUAL_ENV_DISABLE_PROMPT") then
-    set prompt = "(.venv) $prompt"
-    setenv VIRTUAL_ENV_PROMPT "(.venv) "
+    set prompt = "("gateway-iot") $prompt:q"
 endif
 
 alias pydoc python -m pydoc
