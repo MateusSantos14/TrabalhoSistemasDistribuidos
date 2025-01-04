@@ -142,6 +142,12 @@ func (g *Gateway) processClientMessage(clientMsg *messages.ClientMessage) (*mess
 				Response: fmt.Sprintf("Invalid request format COMMAND|PARAM|DATA"),
 			}, nil
 		}
+		if device.Type == 0 {
+			log.Printf("invalid request format, Sensor cannot change state")
+			return &messages.ClientResponse{
+				Response: fmt.Sprintf("Sensors cannot change state"),
+			}, nil
+		}
 		new_data := parts[2]
 		device.LastState = new_data
 		g.sendMessageToDevice(deviceID, new_data)
@@ -337,6 +343,7 @@ func isTimeoutError(err error) bool {
 	netErr, ok := err.(net.Error)
 	return ok && netErr.Timeout()
 }
+
 func (g *Gateway) processDevice(discoverResp *messages.DiscoverResponse) {
 	g.mutex.Lock()
 	defer g.mutex.Unlock()

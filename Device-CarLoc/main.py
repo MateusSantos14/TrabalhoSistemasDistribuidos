@@ -3,6 +3,6 @@ from CarLocLogic.CarLogic import CarLogic
 
 car = CarLogic("CarLocLogic/coordinates.csv")
 
-sensor = SimulatedSensor.SimulatedSensor(1,"224.0.0.1",9999,9998,car)
+sensor = SimulatedSensor.SimulatedSensor(2,"224.0.0.1",9999,9997,car)
 
 sensor.run()
