@@ -1,4 +1,4 @@
-#!/home/mateus/Desktop/faculdade/distribuidos/trabalho1/TrabalhoSistemasDistribuidos/.venv/bin/python3
+#!/home/fruet/dev/golang/gateway-iot/.venv/bin/python
 # -*- coding: utf-8 -*-
 import re
 import sys
