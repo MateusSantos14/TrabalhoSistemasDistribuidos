@@ -1,16 +1,21 @@
 import SimulatedActuator
+from HeadlightLogic.CarHeadlightLogic import CarHeadlightLogic
 
-class Actuator():
-    def __init__(self,name):
-        self.name = name
-        self.data = 0
-    def get_data(self):
-        return self.data
-    def set_data(self,data):
-        self.data = data
+# Configuração do atuador
+device_id = 1
+multicast_addr = "224.0.0.1"
+multicast_port = 9999
+port = 9996
+headlights=CarHeadlightLogic() ## Headlight
 
+# Instanciação do SimulatedActuator
+sensor = SimulatedActuator.SimulatedActuator(
+    device_id=device_id,
+    multicast_addr=multicast_addr,
+    multicast_port=multicast_port,
+    port=port,
+    simulator=headlights
+)
 
-
-sensor = SimulatedActuator.SimulatedActuator(1,"224.0.0.1",9999,9998,Actuator("2"))
-
+# Executa o SimulatedActuator
 sensor.run()
