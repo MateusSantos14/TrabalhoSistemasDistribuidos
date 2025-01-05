@@ -227,6 +227,7 @@ func (g *Gateway) sendMessageToDevice(deviceID, message string) error {
 
 // discoverDevices sends a discovery request periodically and listens for responses.
 func (g *Gateway) discoverDevices(multicastAddr string) {
+    // Listen to every network interface on 0.0.0.0 at port 9990
 	udpAddr, err := net.ResolveUDPAddr("udp", fmt.Sprintf("%s:%d", "0.0.0.0", 9990))
 	if err != nil {
 		log.Printf("Failed to listen on port %s", fmt.Sprintf("%s:%d", "0.0.0.0", 9990))
@@ -361,6 +362,22 @@ func (g *Gateway) processDevice(discoverResp *messages.DiscoverResponse) {
 	log.Printf("Discovered device: ID=%s, IP=%s, Port=%d, Type=%d", device.ID, device.IP, device.Port, device.Type)
 }
 
+func (g *Gateway) handleDeviceConnection(buf []byte, n int, addr *net.UDPAddr) {
+    // Unmarshal the Protobuf message
+    var deviceMsg messages.DeviceMessage
+    err := proto.Unmarshal(buf[:n], &deviceMsg)
+    if err != nil {
+        log.Printf("Failed to unmarshal UDP message")
+        return
+    }
+
+    log.Printf("Received UDP message from %s: ID=%s, Data=%s",
+        addr.String(), deviceMsg.DeviceId, deviceMsg.Data)
+
+    // Process the DeviceMessage
+    g.processDeviceMessage(&deviceMsg)
+}
+
 func (g *Gateway) handleUDPConnection(conn *net.UDPConn) {
 	defer conn.Close()
 
@@ -375,19 +392,7 @@ func (g *Gateway) handleUDPConnection(conn *net.UDPConn) {
 			return
 		}
 
-		// Unmarshal the Protobuf message
-		var deviceMsg messages.DeviceMessage
-		err = proto.Unmarshal(buf[:n], &deviceMsg)
-		if err != nil {
-			log.Printf("Failed to unmarshal UDP message")
-			continue
-		}
-
-		log.Printf("Received UDP message from %s: ID=%s, Data=%s",
-			addr.String(), deviceMsg.DeviceId, deviceMsg.Data)
-
-		// Process the DeviceMessage
-		g.processDeviceMessage(&deviceMsg)
+        g.handleDeviceConnection(buf, n, addr)
 	}
 }
 
