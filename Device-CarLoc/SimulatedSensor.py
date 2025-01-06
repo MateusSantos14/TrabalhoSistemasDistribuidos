@@ -37,8 +37,10 @@ class SimulatedSensor:
 
             if discover_msg.request == "DISCOVERY_REQUEST":
                 print(f"Received DISCOVERY_REQUEST from {addr}, Data: {discover_msg}", flush=True)
-                self.send_discovery_response(addr)
-                self.setup_udp_connection(discover_msg.ip, discover_msg.port)
+
+                if self.broker_ip is None or self.broker_port is None:
+                    self.send_discovery_response(addr)
+                    self.setup_udp_connection(discover_msg.ip, discover_msg.port)
             else:
                 print(f"Received unknown message from {addr}, Request: {discover_msg.request}", flush=True)
         except Exception as e:
