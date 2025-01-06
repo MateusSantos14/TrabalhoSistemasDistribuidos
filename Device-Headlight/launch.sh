@@ -11,7 +11,7 @@ if [ "$1" = "local" ]; then
 elif [ "$1" = "remote" ]; then
   echo "Running in remote mode..."
   docker build -t device-headlight .
-  docker run --rm -p 9998:9998 -e HOST_IP=$(hostname -I | awk '{print $1}') device-headlight
+  docker run --rm -p 9998:9998 -p 9999:9999 -e HOST_IP=$(hostname -I | awk '{print $1}') device-headlight
 else
   echo "Usage: $0 [local|remote]"
   exit 1
