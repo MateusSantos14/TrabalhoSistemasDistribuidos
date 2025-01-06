@@ -334,7 +334,7 @@ func (g *Gateway) listenForResponses(multicastAddr string) {
 			}
 
 			// Process the discovered device
-			g.processDevice(&discoverResp)
+			go g.processDevice(&discoverResp)
 		}
 	}
 }
@@ -375,6 +375,7 @@ func (g *Gateway) handleDeviceConnection(buf []byte, n int, addr *net.UDPAddr) {
         addr.String(), deviceMsg.DeviceId, deviceMsg.Data)
 
     // Process the DeviceMessage
+    // No need to have another coroutine, as this is already a coroutine.
     g.processDeviceMessage(&deviceMsg)
 }
 
