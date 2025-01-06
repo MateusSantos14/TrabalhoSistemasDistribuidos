@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"os"
 	"strings"
 	"sync"
 	"time"
@@ -227,7 +228,7 @@ func (g *Gateway) sendMessageToDevice(deviceID, message string) error {
 
 // discoverDevices sends a discovery request periodically and listens for responses.
 func (g *Gateway) discoverDevices(multicastAddr string) {
-    // Listen to every network interface on 0.0.0.0 at port 9990
+	// Listen to every network interface on 0.0.0.0 at port 9990
 	udpAddr, err := net.ResolveUDPAddr("udp", fmt.Sprintf("%s:%d", "0.0.0.0", 9990))
 	if err != nil {
 		log.Printf("Failed to listen on port %s", fmt.Sprintf("%s:%d", "0.0.0.0", 9990))
@@ -363,20 +364,20 @@ func (g *Gateway) processDevice(discoverResp *messages.DiscoverResponse) {
 }
 
 func (g *Gateway) handleDeviceConnection(buf []byte, n int, addr *net.UDPAddr) {
-    // Unmarshal the Protobuf message
-    var deviceMsg messages.DeviceMessage
-    err := proto.Unmarshal(buf[:n], &deviceMsg)
-    if err != nil {
-        log.Printf("Failed to unmarshal UDP message")
-        return
-    }
+	// Unmarshal the Protobuf message
+	var deviceMsg messages.DeviceMessage
+	err := proto.Unmarshal(buf[:n], &deviceMsg)
+	if err != nil {
+		log.Printf("Failed to unmarshal UDP message")
+		return
+	}
 
-    log.Printf("Received UDP message from %s: ID=%s, Data=%s",
-        addr.String(), deviceMsg.DeviceId, deviceMsg.Data)
+	log.Printf("Received UDP message from %s: ID=%s, Data=%s",
+		addr.String(), deviceMsg.DeviceId, deviceMsg.Data)
 
-    // Process the DeviceMessage
-    // No need to have another coroutine, as this is already a coroutine.
-    g.processDeviceMessage(&deviceMsg)
+	// Process the DeviceMessage
+	// No need to have another coroutine, as this is already a coroutine.
+	g.processDeviceMessage(&deviceMsg)
 }
 
 func (g *Gateway) handleUDPConnection(conn *net.UDPConn) {
@@ -387,13 +388,13 @@ func (g *Gateway) handleUDPConnection(conn *net.UDPConn) {
 	log.Printf("Gateway listening on UDP: %s", localAddr)
 	for {
 		log.Printf("Waiting message")
-		n, addr, err := conn.ReadFromUDP(buf) //TALVEZ PRECISE DE UM MUTEX AQUI(RECEBER VÁRIOS UDP)
+		n, addr, err := conn.ReadFromUDP(buf)
 		if err != nil {
 			log.Printf("UDP read error")
 			return
 		}
 
-        go g.handleDeviceConnection(buf, n, addr)
+		go g.handleDeviceConnection(buf, n, addr)
 	}
 }
 
@@ -413,6 +414,7 @@ func (g *Gateway) processDeviceMessage(deviceMsg *messages.DeviceMessage) {
 	}
 }
 
+/*
 func getLocalIP() string {
 	conn, err := net.Dial("udp", "8.8.8.8:80")
 	if err != nil {
@@ -422,6 +424,38 @@ func getLocalIP() string {
 
 	localAddr := conn.LocalAddr().(*net.UDPAddr)
 	return localAddr.IP.String()
+}
+*/
+
+// Function to get the local IP (host or container IP)
+func getLocalIP() string {
+	// Check if HOST_IP is set in the environment variables
+	hostIP := os.Getenv("HOST_IP")
+	if hostIP != "" {
+		fmt.Printf("Setting host IP from environment variable: %s\n", hostIP)
+		return hostIP
+	}
+
+	// If the environment variable is not set, fallback to the container's hostname IP
+	containerIP, err := net.LookupIP(getHostname())
+	if err == nil && len(containerIP) > 0 {
+		fmt.Printf("Failed to get HOST_IP from env, setting IP to container IP: %s\n", containerIP[0].String())
+		return containerIP[0].String()
+	}
+
+	// Default to localhost if everything else fails
+	fmt.Println("Failed to resolve IP, defaulting to localhost (127.0.0.1)")
+	return "127.0.0.1"
+}
+
+// Function to get the container's hostname
+func getHostname() string {
+	hostname, err := os.Hostname()
+	if err != nil {
+		fmt.Printf("Failed to get container hostname: %v\n", err)
+		return "localhost"
+	}
+	return hostname
 }
 
 // main function

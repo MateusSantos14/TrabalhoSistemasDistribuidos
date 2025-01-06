@@ -2,6 +2,7 @@ import time
 import socket
 from messages import messages_pb2 as messages
 from threading import Thread
+import os
 
 class SimulatedActuator:
     def __init__(self, device_id, multicast_addr, multicast_port, port, simulator, periodicity=5):
@@ -37,8 +38,9 @@ class SimulatedActuator:
 
             if discover_msg.request == "DISCOVERY_REQUEST":
                 print(f"Received DISCOVERY_REQUEST from {addr}, Data: {discover_msg}", flush=True)
-                self.send_discovery_response(addr)
-                self.setup_udp_connection(discover_msg.ip, discover_msg.port)
+                if self.broker_ip is None or self.broker_port is None:
+                    self.send_discovery_response(addr)
+                    self.setup_udp_connection(discover_msg.ip, discover_msg.port)
             else:
                 print(f"Received unknown message from {addr}, Request: {discover_msg.request}", flush=True)
         except Exception as e:
@@ -48,9 +50,10 @@ class SimulatedActuator:
         # Send a discovery response
         response = messages.DiscoverResponse()
         response.device_id = self.device_id
-        response.ip = socket.gethostbyname(socket.gethostname())
+        response.ip = self.get_ip()
         response.port = self.port
         response.type = 1
+        print(response)
         data = response.SerializeToString()
 
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
@@ -94,7 +97,6 @@ class SimulatedActuator:
         """
         while(self.broker_ip == None):
             continue
-        self.broker_port+=1
         while True:
             try:
                 # Cria um socket TCP para escutar
@@ -142,7 +144,23 @@ class SimulatedActuator:
             print(f"Error handling connection from {addr}: {e}", flush=True)
         finally:
             client_socket.close()
-
+    
+    def get_ip(self):
+        # Check if HOST_IP is set in the environment variables
+        host_ip = os.getenv("HOST_IP")
+        
+        if host_ip:
+            print(f"Setting host IP from environment variable: {host_ip}")
+            return host_ip
+        
+        # If the environment variable is not set, fallback to container's IP
+        try:
+            container_ip = socket.gethostbyname(socket.gethostname())
+            print(f"Failed to get HOST_IP from env, setting IP to container IP: {container_ip}")
+            return container_ip
+        except socket.error as e:
+            print(f"Failed to get container IP: {e}, defaulting to 127.0.0.1")
+            return "127.0.0.1"
 
     def run(self):
         # Start the multicast listener in a separate thread

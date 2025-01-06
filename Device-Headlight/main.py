@@ -2,7 +2,7 @@ import SimulatedActuator
 from HeadlightLogic.CarHeadlightLogic import CarHeadlightLogic
 
 # Configuração do atuador
-device_id = 1
+device_id = 3
 multicast_addr = "224.0.0.1"
 multicast_port = 9999
 port = 9996

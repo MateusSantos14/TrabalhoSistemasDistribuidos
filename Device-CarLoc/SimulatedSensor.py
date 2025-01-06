@@ -2,6 +2,7 @@ import time
 import socket
 from messages import messages_pb2 as messages
 from threading import Thread
+import os
 
 class SimulatedSensor:
     def __init__(self, device_id, multicast_addr, multicast_port, port, simulator, periodicity=5):
@@ -50,7 +51,7 @@ class SimulatedSensor:
         # Send a discovery response
         response = messages.DiscoverResponse()
         response.device_id = self.device_id
-        response.ip = socket.gethostbyname(socket.gethostname())
+        response.ip = self.get_ip()
         response.port = self.port
         response.type = 0
         data = response.SerializeToString()
@@ -88,6 +89,25 @@ class SimulatedSensor:
                     print(f"Error sending sensor data: {e}", flush=True)
 
             time.sleep(self.periodicity)
+
+        
+    def get_ip(self):
+        # Check if HOST_IP is set in the environment variables
+        host_ip = os.getenv("HOST_IP")
+        
+        if host_ip:
+            print(f"Setting host IP from environment variable: {host_ip}")
+            return host_ip
+        
+        # If the environment variable is not set, fallback to container's IP
+        try:
+            container_ip = socket.gethostbyname(socket.gethostname())
+            print(f"Failed to get HOST_IP from env, setting IP to container IP: {container_ip}")
+            return container_ip
+        except socket.error as e:
+            print(f"Failed to get container IP: {e}, defaulting to 127.0.0.1")
+            return "127.0.0.1"
+            
 
     def run(self):
         # Start the multicast listener in a separate thread
