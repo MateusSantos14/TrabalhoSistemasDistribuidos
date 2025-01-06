@@ -392,7 +392,7 @@ func (g *Gateway) handleUDPConnection(conn *net.UDPConn) {
 			return
 		}
 
-        g.handleDeviceConnection(buf, n, addr)
+        go g.handleDeviceConnection(buf, n, addr)
 	}
 }
 
