@@ -4,7 +4,7 @@ class CarACLogic:
     def __init__(self, step=1):
         self.step = step
         self.index = 0
-        self.current_state = random.coiche([1, 2, 3])  # Default state is random
+        self.current_state = random.choice([1, 2, 3])  # Default state is random
 
     def get_data(self):
         self.index += self.step
