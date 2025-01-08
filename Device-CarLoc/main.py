@@ -1,8 +1,46 @@
+import sys
 import SimulatedSensor
 from CarLocLogic.CarLogic import CarLogic
 
+# Configurações padrão
+DEFAULT_DEVICE_ID = "CL-1"
+DEFAULT_PORT = 9997
+multicast_addr = "224.0.0.1"
+multicast_port = 9999
+
+print("Argumentos recebidos:", sys.argv)
+
+# Obtém os argumentos da linha de comando
+if len(sys.argv) > 1:
+    device_id = sys.argv[1]  # Primeiro argumento: ID do dispositivo
+else:
+    print(f"Nenhum ID fornecido. Usando o ID padrão {DEFAULT_DEVICE_ID}.")
+    device_id = DEFAULT_DEVICE_ID
+
+if len(sys.argv) > 2:
+    try:
+        port = int(sys.argv[2])  # Segundo argumento: Porta
+    except ValueError:
+        print(f"Porta inválida: {sys.argv[2]}. Usando a porta padrão {DEFAULT_PORT}.")
+        port = DEFAULT_PORT
+else:
+    print(f"Nenhuma porta fornecida. Usando a porta padrão {DEFAULT_PORT}.")
+    port = DEFAULT_PORT
+
+print(f"ID do dispositivo: {device_id}")
+print(f"Porta: {port}")
+
+# Instanciação da lógica do carro
 car = CarLogic("CarLocLogic/coordinates.csv")
 
-sensor = SimulatedSensor.SimulatedSensor(2,"224.0.0.1",9999,9997,car)
+# Instanciação do SimulatedActuator
+sensor =  SimulatedSensor.SimulatedSensor(
+    device_id=device_id,
+    multicast_addr=multicast_addr,
+    multicast_port=multicast_port,
+    port=port,
+    simulator=car
+)
 
+# Executa o SimulatedActuator
 sensor.run()
