@@ -14,7 +14,10 @@ RUN pip install --no-cache-dir -r requirements.txt
 RUN apt-get update && apt-get install -y protobuf-compiler
 
 # Expose the port the app will run on (if needed for your application)
-#EXPOSE 9998
+EXPOSE 9996
 
-# Command to run your application
-CMD ["python", "main.py"]
+# Set ENTRYPOINT to ensure arguments are passed correctly
+ENTRYPOINT ["python", "main.py"]
+
+# Default CMD in case no arguments are provided
+CMD ["AC-1", "9996"]

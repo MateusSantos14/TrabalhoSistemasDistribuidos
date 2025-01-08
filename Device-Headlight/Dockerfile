@@ -14,7 +14,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 RUN apt-get update && apt-get install -y protobuf-compiler
 
 # Expose the port the app will run on (if needed for your application)
-EXPOSE 9991
 EXPOSE 9998
 
 # Command to run your application

@@ -107,8 +107,12 @@ func (g *Gateway) processClientMessage(clientMsg *messages.ClientMessage) (*mess
 
 	// Split the request to parse command and parameters
 	parts := strings.Split(clientMsg.Request, "|")
-	if len(parts) != 2 {
+	if len(parts) < 2 {
 		log.Printf("invalid request format, expected 'COMMAND|PARAM'")
+		return &messages.ClientResponse{
+			Response: fmt.Sprintf("invalid request format, expected 'COMMAND|PARAM'"),
+		}, nil
+
 	}
 
 	command := parts[0]
@@ -193,6 +197,7 @@ func (g *Gateway) sendMessageToDevice(deviceID, message string) error {
 			}
 			defer conn.Close()
 		*/
+		//TRATAR EXCEÇÃO
 		localAddr, err := net.ResolveTCPAddr("tcp", localAddress)
 		if err != nil {
 			log.Fatalf("Failed to resolve local address: %v", err)
@@ -227,7 +232,7 @@ func (g *Gateway) sendMessageToDevice(deviceID, message string) error {
 
 // discoverDevices sends a discovery request periodically and listens for responses.
 func (g *Gateway) discoverDevices(multicastAddr string) {
-    // Listen to every network interface on 0.0.0.0 at port 9990
+	// Listen to every network interface on 0.0.0.0 at port 9990
 	udpAddr, err := net.ResolveUDPAddr("udp", fmt.Sprintf("%s:%d", "0.0.0.0", 9990))
 	if err != nil {
 		log.Printf("Failed to listen on port %s", fmt.Sprintf("%s:%d", "0.0.0.0", 9990))
@@ -363,20 +368,20 @@ func (g *Gateway) processDevice(discoverResp *messages.DiscoverResponse) {
 }
 
 func (g *Gateway) handleDeviceConnection(buf []byte, n int, addr *net.UDPAddr) {
-    // Unmarshal the Protobuf message
-    var deviceMsg messages.DeviceMessage
-    err := proto.Unmarshal(buf[:n], &deviceMsg)
-    if err != nil {
-        log.Printf("Failed to unmarshal UDP message")
-        return
-    }
+	// Unmarshal the Protobuf message
+	var deviceMsg messages.DeviceMessage
+	err := proto.Unmarshal(buf[:n], &deviceMsg)
+	if err != nil {
+		log.Printf("Failed to unmarshal UDP message")
+		return
+	}
 
-    log.Printf("Received UDP message from %s: ID=%s, Data=%s",
-        addr.String(), deviceMsg.DeviceId, deviceMsg.Data)
+	log.Printf("Received UDP message from %s: ID=%s, Data=%s",
+		addr.String(), deviceMsg.DeviceId, deviceMsg.Data)
 
-    // Process the DeviceMessage
-    // No need to have another coroutine, as this is already a coroutine.
-    g.processDeviceMessage(&deviceMsg)
+	// Process the DeviceMessage
+	// No need to have another coroutine, as this is already a coroutine.
+	g.processDeviceMessage(&deviceMsg)
 }
 
 func (g *Gateway) handleUDPConnection(conn *net.UDPConn) {
@@ -393,7 +398,7 @@ func (g *Gateway) handleUDPConnection(conn *net.UDPConn) {
 			return
 		}
 
-        go g.handleDeviceConnection(buf, n, addr)
+		go g.handleDeviceConnection(buf, n, addr)
 	}
 }
 

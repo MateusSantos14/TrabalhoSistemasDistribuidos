@@ -12,9 +12,7 @@ class SimulatedActuator:
         self.port = port
         self.periodicity = periodicity
         self.type = "ACTUATOR"  # Type of device
-        self.broker_ip = None
-        self.broker_port = None
-        self.udp_socket = None
+        self.brokers_address = []
 
     def listen_multicast(self):
         # Listen for multicast messages
@@ -37,14 +35,21 @@ class SimulatedActuator:
 
             if discover_msg.request == "DISCOVERY_REQUEST":
                 print(f"Received DISCOVERY_REQUEST from {addr}, Data: {discover_msg}", flush=True)
-                self.send_discovery_response(addr)
-                self.setup_udp_connection(discover_msg.ip, discover_msg.port)
+                address = f"{discover_msg.ip}:{discover_msg.port}"
+                if address not in self.brokers_address:
+                    self.brokers_address.append(address)
+                    self.send_discovery_response()
+                    Thread(target=self.handle_gateway_tcp_communication, 
+                           args=(discover_msg.ip, discover_msg.port), 
+                           daemon=True).start()
+                    self.setup_udp_connection(discover_msg.ip, discover_msg.port)
+                    
             else:
                 print(f"Received unknown message from {addr}, Request: {discover_msg.request}", flush=True)
         except Exception as e:
             print(f"Error processing multicast message from {addr}: {e}", flush=True)
 
-    def send_discovery_response(self, addr):
+    def send_discovery_response(self):
         # Send a discovery response
         response = messages.DiscoverResponse()
         response.device_id = self.device_id
@@ -61,40 +66,29 @@ class SimulatedActuator:
 
     def setup_udp_connection(self, ip, port):
         # Initialize UDP connection to the broker
-        self.broker_ip = ip
-        self.broker_port = port
-        self.udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         print(f"UDP connection setup with broker at {ip}:{port}", flush=True)
-
         # Start periodic message sending
-        Thread(target=self.send_periodic_messages, daemon=True).start()
-
-    def send_periodic_messages(self):
-        # Periodically send messages to the broker
         while True:
-            if self.broker_ip and self.broker_port:
-                try:
-                    message = messages.DeviceMessage()
-                    message.device_id = self.device_id
-                    message.data = str(self.simulator.get_data())  # Simulate sensor data
-                    print(message)
-                    data = message.SerializeToString()
+            try:
+                message = messages.DeviceMessage()
+                message.device_id = self.device_id
+                message.data = self.simulator.get_data()  # Simulate sensor data
+                print(message)
+                data = message.SerializeToString()
 
-                    self.udp_socket.sendto(data, (self.broker_ip, self.broker_port))
-                    print(f"Sent sensor data to broker at {self.broker_ip}:{self.broker_port}", flush=True)
-                except Exception as e:
-                    print(f"Error sending sensor data: {e}", flush=True)
+                udp_socket.sendto(data, (ip, port))
+                print(f"Sent sensor data to broker at {ip}:{port}", flush=True)
+            except Exception as e:
+                print(f"Error sending sensor data: {e}", flush=True)
 
             time.sleep(self.periodicity)
         
-    def handle_gateway_tcp_communication(self):
+    def handle_gateway_tcp_communication(self,ip,port):
         """
         Listen for incoming TCP connections from the gateway.
         This will run on a separate thread for handling incoming connections.
         """
-        while(self.broker_ip == None):
-            continue
-        self.broker_port+=1
         while True:
             try:
                 # Cria um socket TCP para escutar
@@ -147,7 +141,6 @@ class SimulatedActuator:
     def run(self):
         # Start the multicast listener in a separate thread
         Thread(target=self.listen_multicast, daemon=True).start()
-        Thread(target=self.handle_gateway_tcp_communication, args=(), daemon=True).start()
         
         print("SimulatedActuator is running...", flush=True)
         while True:
