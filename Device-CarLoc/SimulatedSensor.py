@@ -13,6 +13,7 @@ class SimulatedSensor:
         self.periodicity = periodicity
         self.type = "SENSOR"  # Type of device
         self.brokers_address = []
+        self.last_received_time = {}
 
     def listen_multicast(self):
         # Listen for multicast messages
@@ -22,9 +23,10 @@ class SimulatedSensor:
 
         mreq = socket.inet_aton(self.multicast_addr) + socket.inet_aton("0.0.0.0")
         sock.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, mreq)
-
+    
         while True:
             data, addr = sock.recvfrom(1024)
+            print("")
             Thread(target=self.process_message, args=(data, addr)).start()
 
     def process_message(self, data, addr):
@@ -36,6 +38,7 @@ class SimulatedSensor:
             if discover_msg.request == "DISCOVERY_REQUEST":
                 print(f"Received DISCOVERY_REQUEST from {addr}, Data: {discover_msg}", flush=True)
                 address = f"{discover_msg.ip}:{discover_msg.port}"
+                self.last_received_time[address] = time.time()
                 if address not in self.brokers_address:
                     self.brokers_address.append(address)
                     self.send_discovery_response()
@@ -63,10 +66,21 @@ class SimulatedSensor:
     def setup_udp_connection(self, ip, port):
         # Initialize UDP connection to the broker
         udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        print(f"UDP connection setup with broker at {ip}:{port}", flush=True)
+        print(f"UDP connection setup with broker at {ip}:{port}", flush=True)        
         # Start periodic message sending
         while True:
             try:
+                print("Vou ver o If")
+                print(f"Verificando timeout para {ip}:{port}", flush=True)
+                print(f"Último tempo recebido: {self.last_received_time.get(f'{ip}:{port}', 'Não encontrado')}", flush=True)
+                print(f"Tempo atual: {time.time()}", flush=True)
+                print(f"Intervalo: {time.time() - self.last_received_time.get(f'{ip}:{port}', 0)}", flush=True)
+                if time.time() - self.last_received_time[f"{ip}:{port}"] > 7:
+                    print(f"Gateway {ip}:{port} timeout",flush=True)
+                    self.brokers_address.remove(f"{ip}:{port}")
+                    udp_socket.close()
+                    break
+                print("passei do IF",flush=True)
                 message = messages.DeviceMessage()
                 message.device_id = self.device_id
                 message.data = self.simulator.get_data()  # Simulate sensor data
@@ -76,7 +90,7 @@ class SimulatedSensor:
                 udp_socket.sendto(data, (ip, port))
                 print(f"Sent sensor data to broker at {ip}:{port}", flush=True)
             except Exception as e:
-                print(f"Error sending sensor data: {e}", flush=True)
+                print(f"Error sending sensor data: {e}", flush=True)  
 
             time.sleep(self.periodicity)
         

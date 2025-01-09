@@ -13,6 +13,7 @@ class SimulatedActuator:
         self.periodicity = periodicity
         self.type = "ACTUATOR"  # Type of device
         self.brokers_address = []
+        self.last_received_time = {}
 
     def listen_multicast(self):
         # Listen for multicast messages
@@ -39,6 +40,7 @@ class SimulatedActuator:
                 if address not in self.brokers_address:
                     self.brokers_address.append(address)
                     self.send_discovery_response()
+                    self.last_received_time[address] = time.time()
                     Thread(target=self.handle_gateway_tcp_communication, 
                            args=(discover_msg.ip, discover_msg.port), 
                            daemon=True).start()
@@ -71,6 +73,11 @@ class SimulatedActuator:
         # Start periodic message sending
         while True:
             try:
+                if time.time() - self.last_received_time[f"{ip}:{port}"] > 15:
+                    print(f"Gateway {ip}:{port} timeout",flush=True)
+                    self.brokers_address.remove(f"{ip}:{port}")
+                    udp_socket.close()
+                    break
                 message = messages.DeviceMessage()
                 message.device_id = self.device_id
                 message.data = self.simulator.get_data()  # Simulate sensor data
