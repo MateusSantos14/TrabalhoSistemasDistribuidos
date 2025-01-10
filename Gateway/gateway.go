@@ -153,7 +153,7 @@ func (g *Gateway) processClientMessage(clientMsg *messages.ClientMessage) (*mess
 			}, nil
 		}
 		new_data := parts[2]
-		device.LastState = new_data
+		//device.LastState = new_data
 		g.sendMessageToDevice(deviceID, new_data)
 		return &messages.ClientResponse{
 			Response: fmt.Sprintf("Device ID=%s, LastStateChanged=%s ", deviceID, device.LastState),
