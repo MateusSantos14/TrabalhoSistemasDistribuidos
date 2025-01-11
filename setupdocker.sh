@@ -1,1 +1,0 @@
-sudo docker network create my-network

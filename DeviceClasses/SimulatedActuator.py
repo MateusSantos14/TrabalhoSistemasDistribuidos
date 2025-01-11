@@ -16,7 +16,7 @@ class SimulatedActuator:
         self.last_received_time = {}
 
     def listen_multicast(self):
-        # Listen for multicast messages
+        # Ouve multicast
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         sock.bind(("", self.multicast_port))
@@ -30,7 +30,7 @@ class SimulatedActuator:
 
     def process_message(self, data, addr):
         try:
-            # Parse the message using Protobuf
+            # Parsing protobuf
             discover_msg = messages.DiscoverMessage()
             discover_msg.ParseFromString(data)
 
@@ -67,10 +67,10 @@ class SimulatedActuator:
         sock.close()
 
     def setup_udp_connection(self, ip, port):
-        # Initialize UDP connection to the broker
+        # Inicializa a conexão com o gateway
         udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         print(f"UDP connection setup with broker at {ip}:{port}", flush=True)
-        # Start periodic message sending
+        # Envio periodico de mensagens
         while True:
             try:
                 if time.time() - self.last_received_time[f"{ip}:{port}"] > 15:
@@ -80,7 +80,7 @@ class SimulatedActuator:
                     break
                 message = messages.DeviceMessage()
                 message.device_id = self.device_id
-                message.data = self.simulator.get_data()  # Simulate sensor data
+                message.data = self.simulator.get_data()  # Dados de sensores simulados
                 print(message)
                 data = message.SerializeToString()
 
@@ -92,10 +92,6 @@ class SimulatedActuator:
             time.sleep(self.periodicity)
         
     def handle_gateway_tcp_communication(self,ip,port):
-        """
-        Listen for incoming TCP connections from the gateway.
-        This will run on a separate thread for handling incoming connections.
-        """
         while True:
             try:
                 # Cria um socket TCP para escutar
@@ -120,23 +116,19 @@ class SimulatedActuator:
                 print(f"Error setting up TCP listener: {e}", flush=True)
 
     def handle_gateway_connection(self, client_socket, addr):
-        """
-        Handle communication with a connected gateway.
-        Process incoming messages from the gateway.
-        """
         try:
             while True:
-                # Receive data from the gateway
+                # Lida com os dados enviados por um gateway
                 data = client_socket.recv(1024)
                 if not data:
                     print(f"Connection closed by {addr}", flush=True)
                     break
 
-                # Parse the received message
+                # Parsing do protobuf
                 device_response = messages.DeviceResponse()
                 device_response.ParseFromString(data)
                 print(f"Received DeviceResponse from {addr}: Device ID: {device_response.device_id}, Response: {device_response.response}", flush=True)
-                # You can process the received data or update it in the simulator here
+                # Altera o dado no simulador
                 self.simulator.set_data(device_response.response)
 
         except Exception as e:
@@ -146,7 +138,7 @@ class SimulatedActuator:
 
 
     def run(self):
-        # Start the multicast listener in a separate thread
+         # Inicia a thread principal que ouve o multicast
         Thread(target=self.listen_multicast, daemon=True).start()
         
         print("SimulatedActuator is running...", flush=True)

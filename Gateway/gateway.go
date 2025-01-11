@@ -12,23 +12,20 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-// Device represents a discovered device.
 type Device struct {
 	ID        string
 	IP        string
 	Port      int
-	Type      int    // Type of device (0 or 1)
-	LastState string // Último estado recebido do dispositivo
+	Type      int
+	LastState string
 }
 
-// Gateway holds the state of devices and clients.
 type Gateway struct {
-	devices map[string]Device   // Keyed by device ID
-	clients map[string]net.Conn // Keyed by client address
+	devices map[string]Device
+	clients map[string]net.Conn
 	mutex   sync.RWMutex
 }
 
-// NewGateway initializes and returns a new Gateway instance.
 func NewGateway() *Gateway {
 	return &Gateway{
 		devices: make(map[string]Device),
@@ -100,12 +97,12 @@ func (g *Gateway) processClient(conn net.Conn) {
 }
 
 func (g *Gateway) processClientMessage(clientMsg *messages.ClientMessage) (*messages.ClientResponse, error) {
-	g.mutex.RLock() // Use read lock to allow concurrent reads
+	g.mutex.RLock() // Leituras concorrentes
 	defer g.mutex.RUnlock()
 
 	log.Printf("Processing ClientMessage: Request=%s", clientMsg.Request)
 
-	// Split the request to parse command and parameters
+	// Obtem os parametros da requisição
 	parts := strings.Split(clientMsg.Request, "|")
 	if len(parts) < 2 {
 		log.Printf("invalid request format, expected 'COMMAND|PARAM'")
@@ -120,14 +117,14 @@ func (g *Gateway) processClientMessage(clientMsg *messages.ClientMessage) (*mess
 
 	switch command {
 	case "GET_DEVICE_STATE":
-		// Check if the device exists
+		// Confere se o dispositivo existe
 		device, exists := g.devices[deviceID]
 		if !exists {
 			return &messages.ClientResponse{
 				Response: fmt.Sprintf("Device ID=%s not found", deviceID),
 			}, nil
 		}
-		// Return the device's last state
+		// Retorna o ultimo estado do dispositivo
 		return &messages.ClientResponse{
 			Response: fmt.Sprintf("Device ID=%s, LastState=%s", deviceID, device.LastState),
 		}, nil
@@ -139,7 +136,7 @@ func (g *Gateway) processClientMessage(clientMsg *messages.ClientMessage) (*mess
 				Response: fmt.Sprintf("Device ID=%s not found", deviceID),
 			}, nil
 		}
-		// Set new device state
+		// Muda o estado do dispositivo
 		if len(parts) != 3 {
 			log.Printf("invalid request format, expected 'COMMAND|PARAM'")
 			return &messages.ClientResponse{
@@ -185,7 +182,7 @@ func (g *Gateway) sendMessageToDevice(deviceID, message string) error {
 			return fmt.Errorf("actuator ID=%s has invalid address or port", deviceID)
 		}
 
-		// Create a new TCP connection for the message
+		// Estabelece uma conexão tcp para lidar realizar mudança no atuador
 		localAddress := fmt.Sprintf(":%d", device.Port)
 		remoteAddress := fmt.Sprintf("%s:%d", device.IP, device.Port)
 		/*
@@ -203,14 +200,13 @@ func (g *Gateway) sendMessageToDevice(deviceID, message string) error {
 			log.Fatalf("Failed to resolve local address: %v", err)
 		}
 
-		// Dial the remote server using the specified source port
+		// Lida com o envio da mensagem
 		dialer := &net.Dialer{LocalAddr: localAddr}
 		conn, err := dialer.Dial("tcp", remoteAddress)
 		if err != nil {
 			log.Fatalf("Failed to connect to %s from %s: %v", remoteAddress, localAddress, err)
 		}
 		defer conn.Close()
-		// Send the message
 		deviceResponse := &messages.DeviceResponse{
 			DeviceId: deviceID,
 			Response: message,
@@ -230,9 +226,9 @@ func (g *Gateway) sendMessageToDevice(deviceID, message string) error {
 	return nil
 }
 
-// discoverDevices sends a discovery request periodically and listens for responses.
+// Envia uma mensagem de discobrimento a cada 5 segundos
 func (g *Gateway) discoverDevices(multicastAddr string) {
-	// Listen to every network interface on 0.0.0.0 at port 9990
+	// Ouve a resposta dos dispositivos
 	udpAddr, err := net.ResolveUDPAddr("udp", fmt.Sprintf("%s:%d", "0.0.0.0", 9990))
 	if err != nil {
 		log.Printf("Failed to listen on port %s", fmt.Sprintf("%s:%d", "0.0.0.0", 9990))
@@ -250,11 +246,11 @@ func (g *Gateway) discoverDevices(multicastAddr string) {
 
 	go g.handleClient(9991)
 
-	ticker := time.NewTicker(5 * time.Second) // Set the interval for discovery (30 seconds)
+	ticker := time.NewTicker(5 * time.Second) // Discobre a cada 5 segundos
 	defer ticker.Stop()
 
 	for {
-		// Create a new discovery message
+		// Cria mensagem
 		discoverMsg := &messages.DiscoverMessage{
 			Request: "DISCOVERY_REQUEST",
 			Ip:      getLocalIP(),
@@ -263,53 +259,46 @@ func (g *Gateway) discoverDevices(multicastAddr string) {
 
 		log.Printf("Discovered message: Request=%s, IP=%s, Port=%d", discoverMsg.Request, discoverMsg.Ip, discoverMsg.Port)
 
-		// Serialize the message
+		// Serializa mensagem
 		serializedMsg, err := proto.Marshal(discoverMsg)
 		if err != nil {
 			log.Fatalf("Failed to marshal DiscoverMessage: %v", err)
 		}
 
-		// Setup the multicast address
+		// Define endereço multicast
 		conn, err := net.Dial("udp", multicastAddr)
 		if err != nil {
 			log.Fatalf("Failed to dial multicast address: %v", err)
 		}
 		defer conn.Close()
 
-		// Send the serialized message over multicast
+		// Envia mensagem via multicast
 		_, err = conn.Write(serializedMsg)
 		if err != nil {
 			log.Fatalf("Failed to send multicast message: %v", err)
 		}
 		log.Println("Multicast discover sent")
 
-		// Listen for responses
+		// Ouve respostas
 		g.listenForResponses(multicastAddr)
 
-		// Wait for the next tick before sending another discovery message
+		// Aguarda o próximo envio periodico
 		<-ticker.C
 	}
 }
 
-// listenForResponses listens for responses to the multicast discovery request for a limited duration.
+// Ouve respostas do descobrimento
 func (g *Gateway) listenForResponses(multicastAddr string) {
-	// Resolve the UDP address
 	addr, err := net.ResolveUDPAddr("udp", multicastAddr)
 	if err != nil {
 		log.Fatalf("Failed to resolve UDP address: %v", err)
 	}
-
-	// Create a UDP connection to listen for responses
 	conn, err := net.ListenMulticastUDP("udp", nil, addr)
 	if err != nil {
 		log.Fatalf("Failed to listen on multicast address: %v", err)
 	}
 	defer conn.Close()
-
-	// Buffer to read incoming data
 	buf := make([]byte, 1024)
-
-	// Channel to signal timeout
 	timeout := time.After(2 * time.Second)
 
 	for {
@@ -318,10 +307,7 @@ func (g *Gateway) listenForResponses(multicastAddr string) {
 			log.Println("Timeout reached: Stopping response listening")
 			return
 		default:
-			// Set a short read timeout to allow checking the timeout channel
 			conn.SetReadDeadline(time.Now().Add(100 * time.Millisecond))
-
-			// Receive the message
 			n, _, err := conn.ReadFromUDP(buf)
 			if err != nil {
 				if !isTimeoutError(err) {
@@ -329,22 +315,17 @@ func (g *Gateway) listenForResponses(multicastAddr string) {
 				}
 				continue
 			}
-
-			// Unmarshal the received message into a DiscoverResponse
 			var discoverResp messages.DiscoverResponse
 			err = proto.Unmarshal(buf[:n], &discoverResp)
 			if err != nil {
 				log.Printf("Failed to unmarshal DiscoverResponse: %v", err)
 				continue
 			}
-
-			// Process the discovered device
 			go g.processDevice(&discoverResp)
 		}
 	}
 }
 
-// isTimeoutError checks if the error is a timeout error.
 func isTimeoutError(err error) bool {
 	netErr, ok := err.(net.Error)
 	return ok && netErr.Timeout()
@@ -368,7 +349,6 @@ func (g *Gateway) processDevice(discoverResp *messages.DiscoverResponse) {
 }
 
 func (g *Gateway) handleDeviceConnection(buf []byte, n int, addr *net.UDPAddr) {
-	// Unmarshal the Protobuf message
 	var deviceMsg messages.DeviceMessage
 	err := proto.Unmarshal(buf[:n], &deviceMsg)
 	if err != nil {
@@ -378,9 +358,6 @@ func (g *Gateway) handleDeviceConnection(buf []byte, n int, addr *net.UDPAddr) {
 
 	log.Printf("Received UDP message from %s: ID=%s, Data=%s",
 		addr.String(), deviceMsg.DeviceId, deviceMsg.Data)
-
-	// Process the DeviceMessage
-	// No need to have another coroutine, as this is already a coroutine.
 	g.processDeviceMessage(&deviceMsg)
 }
 
@@ -392,7 +369,7 @@ func (g *Gateway) handleUDPConnection(conn *net.UDPConn) {
 	log.Printf("Gateway listening on UDP: %s", localAddr)
 	for {
 		log.Printf("Waiting message")
-		n, addr, err := conn.ReadFromUDP(buf) //TALVEZ PRECISE DE UM MUTEX AQUI(RECEBER VÁRIOS UDP)
+		n, addr, err := conn.ReadFromUDP(buf)
 		if err != nil {
 			log.Printf("UDP read error")
 			return
@@ -429,16 +406,10 @@ func getLocalIP() string {
 	return localAddr.IP.String()
 }
 
-// main function
 func main() {
-	// Initialize the Gateway
 	gateway := NewGateway()
 
-	// Start multicast discovery in a separate goroutine.
 	go gateway.discoverDevices("224.0.0.1:9999")
-
 	println("Gateway IP = %s", getLocalIP())
-
-	// This is a simple way to keep the main function alive while the goroutine runs.
 	select {}
 }

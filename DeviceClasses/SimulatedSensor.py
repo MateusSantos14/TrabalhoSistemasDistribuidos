@@ -11,12 +11,12 @@ class SimulatedSensor:
         self.simulator = simulator
         self.port = port
         self.periodicity = periodicity
-        self.type = "SENSOR"  # Type of device
+        self.type = "SENSOR"  # Tipo do dispositivo
         self.brokers_address = []
         self.last_received_time = {}
 
     def listen_multicast(self):
-        # Listen for multicast messages
+        # Ouve o multicast
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         sock.bind(("", self.multicast_port))
@@ -30,7 +30,7 @@ class SimulatedSensor:
 
     def process_message(self, data, addr):
         try:
-            # Parse the message using Protobuf
+            #Parsing do protobuf
             discover_msg = messages.DiscoverMessage()
             discover_msg.ParseFromString(data)
 
@@ -48,7 +48,7 @@ class SimulatedSensor:
             print(f"Error processing multicast message from {addr}: {e}", flush=True)
 
     def send_discovery_response(self):
-        # Send a discovery response
+        # Resposta da discoberta
         response = messages.DiscoverResponse()
         response.device_id = self.device_id
         response.ip = socket.gethostbyname(socket.gethostname())
@@ -63,10 +63,10 @@ class SimulatedSensor:
         sock.close()
 
     def setup_udp_connection(self, ip, port):
-        # Initialize UDP connection to the broker
+        # Inicializa a conexão com o gateway
         udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         print(f"UDP connection setup with broker at {ip}:{port}", flush=True)        
-        # Start periodic message sending
+        # Envio periodico de mensagens
         while True:
             try:
                 if time.time() - self.last_received_time[f"{ip}:{port}"] > 15:
@@ -76,7 +76,7 @@ class SimulatedSensor:
                     break
                 message = messages.DeviceMessage()
                 message.device_id = self.device_id
-                message.data = self.simulator.get_data()  # Simulate sensor data
+                message.data = self.simulator.get_data()  # Dados simulados
                 print(message)
                 data = message.SerializeToString()
 
@@ -89,7 +89,7 @@ class SimulatedSensor:
         
 
     def run(self):
-        # Start the multicast listener in a separate thread
+        # Inicia a thread principal que ouve o multicast
         Thread(target=self.listen_multicast, daemon=True).start()
         print("SimulatedSensor is running...", flush=True)
         while True:
