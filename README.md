@@ -8,34 +8,26 @@ containers Docker. Os dispositivos interagem através de Protocol Buffers
 dinâmica e comunicação entre os dispositivos.
 
 # Estrutura do Projeto
-    ├── comandsProtoc
-    ├── Device-AC
-    │   ├── main.py
-    │   └── SimulatedActuator.py
-    ├── Device-CarLoc
-    │   ├── Dockerfile
-    │   ├── launch.sh
-    │   ├── main.py
-    │   ├── messages
-    │   │   └── messages_pb2.py
-    │   ├── requirements.txt
-    │   └── SimulatedSensor.py
-    ├── Device-Headlight
-    │   └── main.py
-    ├── Gateway
-    │   ├── Dockerfile
-    │   ├── gateway
-    │   ├── gateway.go
-    │   ├── go.mod
-    │   ├── go.sum
-    │   ├── launch.sh
-    │   └── messages
-    │       ├── messages.pb.go
-    │       └── messages.proto
-    ├── launch.sh
-    ├── messages
-    │   └── messages.proto
-    └── README.md
+C:.
+├───.venv
+│   └───bin
+├───Client
+│   └───messages
+│       └───__pycache__
+├───Device-AC
+│   ├───ACLogic
+│   └───messages
+├───Device-CarLoc
+│   ├───CarLocLogic
+│   ├───messages
+│   └───__pycache__
+├───Device-Headlight
+│   ├───HeadlightLogic
+│   └───messages
+├───DeviceClasses
+├───Gateway
+│   └───messages
+└───messages
 # Componentes
 
 -   **Device-AC**: Simula um dispositivo atuador,
@@ -82,27 +74,6 @@ dinâmica e comunicação entre os dispositivos.
 -   **Rode o cliente**: Altere no código o IP do destino e rode o cliente(PRVISÓRIO)
 
 #   Mensagens:
-ClientMessage.request
 "GET_DEVICE_STATE|ID"
-"CHANGE_DEVICE_STATE|ID|NEW_STATE"
+"set_DEVICE_STATE|ID|NEW_STATE"
 
-message ClientResponse {
-    string response = 1; // Resposta do Broker para o cliente
-}
-DiscoverMessage.requests:
-"DISCOVER_DEVICES"
-
-# RECADOS
-
-Olá a todos, comecei a realização do trabalho, mas ainda falta muito a ser feito e conto com vocês.
-
-
-# TODOS
--   **Linkar com cliente GUI**: Temos um cliente em linha de comando funcional, falta o cliente com interface web.
--   **Implementar disconnect do broker**: Quando fechar o broker, mandar multicast para os devices pararem de enviar mensagem e implementar
-    essa função no device.
--   **Implementar lógica de HeadLight e AC**: A parte da comunicação está funcionando, porém, não temos a lógica dos dispositivos implementada, e o container de Device-AC também não, confiram como está feito em headlight e fazer a lógica dos dispositivos.
--   **Refatoração de código**: Como podem ver, o código foi feito num ritmo de prova de conceito, 
-    por isso, seria interessante que fosse realizada a leitura do código e observada possíveis melhorias: Os devices são a parte mais simples e fácil por serem genéricos.
-    Por sua vez, seria interessante o gateway ser mais robusto, observem o que pode ser melhorado nele(funções mais claras e as funcionaldiades que faltam)
--   **REVISAR ESQUEMA DE PORTAS ENTRE CONTAINERS**: A comunicação atual está funcionando, porém, seria interessante conferir se não vai haver algum problema na forma que as    portas foram alocadas.
